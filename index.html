@@ -1,0 +1,514 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
+  <title>Overcharge Dash</title>
+  <style>
+    :root {
+      --bg1: #0b1a2a;
+      --bg2: #18324d;
+      --lane: #1f3b5a;
+      --lane-line: rgba(255,255,255,0.35);
+      --accent: #36f1d2;
+      --danger: #ff5f5f;
+      --text: #e9f2ff;
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      background: radial-gradient(circle at 30% 20%, #1a2f4a 0%, #0b1320 60%, #070b12 100%);
+      font-family: "Trebuchet MS", "Verdana", sans-serif;
+      color: var(--text);
+      overflow: hidden;
+      touch-action: none;
+    }
+    #wrap {
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    #game {
+      width: min(90vw, 60vh);
+      aspect-ratio: 2 / 3;
+      background: #0b1320;
+      border-radius: 18px;
+      box-shadow: 0 18px 40px rgba(0,0,0,0.35), inset 0 0 0 2px rgba(255,255,255,0.05);
+    }
+    #hud {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 12px;
+    }
+    #topbar {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 14px;
+      letter-spacing: 0.5px;
+    }
+    #energy {
+      width: 120px;
+      height: 32px;
+      image-rendering: pixelated;
+    }
+    #overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 16px;
+      background: linear-gradient(180deg, rgba(8,15,25,0.9), rgba(8,15,25,0.75));
+    }
+    #overlay.hidden { display: none; }
+    .card {
+      max-width: 320px;
+      background: rgba(12,20,32,0.8);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 16px;
+      padding: 18px;
+      box-shadow: 0 10px 24px rgba(0,0,0,0.4);
+    }
+    .title { font-size: 20px; margin-bottom: 6px; }
+    .subtitle { font-size: 14px; opacity: 0.8; margin-bottom: 12px; }
+    .btn {
+      display: inline-block;
+      padding: 10px 16px;
+      border-radius: 999px;
+      background: var(--accent);
+      color: #0b1320;
+      font-weight: 700;
+    }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/@farcade/game-sdk@latest/dist/index.min.js"></script>
+</head>
+<body>
+  <div id="wrap">
+    <canvas id="game" width="600" height="900"></canvas>
+    <div id="hud">
+      <div id="topbar">
+        <div id="score">SCORE 0</div>
+        <img id="energy" alt="energy" />
+      </div>
+      <div id="hint" style="font-size:12px;opacity:0.8;">Swipe or drag to change lanes</div>
+    </div>
+    <div id="overlay">
+      <div class="card">
+        <div class="title">Overcharge Dash</div>
+        <div class="subtitle">Dodge drones, build charge, then blast through them.</div>
+        <div class="btn">Tap to Start</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Asset URLs
+    const ASSETS = {
+      scooter: {
+        rearIdle: [
+          "https://remix.gg/blob/l8nDNl52fBh1/scootercometstarlight_rear3quarter_idle_01-5lZELlk6XU-4TmTgYx99fEd7RYu8HNhSGteRjkXYw.webp?ITKu",
+          "https://remix.gg/blob/l8nDNl52fBh1/scootercometstarlight_rear3quarter_idle_02-YkKvIhhTDy-TLzQdLfISZcqml3DG8NZXQOOGudY2g.webp?7VIA",
+          "https://remix.gg/blob/l8nDNl52fBh1/scootercometstarlight_rear3quarter_idle_03-0ocqhJtRxW-KkhyEGLk3tD8pZuWegXaY9XdS6bpks.webp?OnJG",
+          "https://remix.gg/blob/l8nDNl52fBh1/scootercometstarlight_rear3quarter_idle_04-RZksIheBKd-ThJfR8AIkhxj31EjjTS0PGuR4PgJ1N.webp?VxpT"
+        ],
+        rearFast: [
+          "https://remix.gg/blob/l8nDNl52fBh1/scootercometstarlight_rear3quarter_gofast_01-mKJBKoKVzI-XMTVertzT6T8E2tLwZUQ4ANgPsR6zz.webp?LuXB",
+          "https://remix.gg/blob/l8nDNl52fBh1/scootercometstarlight_rear3quarter_gofast_02-ENRGeUtYeM-FLf97ke4jMgpr89lz3fF4t8nYHRhMm.webp?qEUC",
+          "https://remix.gg/blob/l8nDNl52fBh1/scootercometstarlight_rear3quarter_gofast_03-CcWH1j28l9-4Ndx6BxTeJaW7tyu4okxKDZ2tlKaHw.webp?y88M"
+        ],
+        rearLeft: "https://remix.gg/blob/l8nDNl52fBh1/scootercometstarlight_rear3quarter_left-FYq7oeqdMs-xKqejKiO2pdpyNldQGcT4JR7dqQ4gP.webp?qyqW",
+        rearRight: "https://remix.gg/blob/l8nDNl52fBh1/scootercometstarlight_rear3quarter_right-kxDa3pwapd-6iq2UTabmloObEhkzA0iUFQb8Ml0K8.webp?ydu4",
+        rearStop: "https://remix.gg/blob/l8nDNl52fBh1/scootercometstarlight_rear3quarter_stop-hAIEl26qBJ-IO5oIrxX3CwpFiynArQbEZ6UylqLrG.webp?QeDG"
+      },
+      enemies: [
+        // Orange
+        "https://remix.gg/blob/l8nDNl52fBh1/orangeminizfo_angles0001-ILPVDym5Jf-nDW5rlcgUaHM073ITVTFUZieog0Vjc.webp?NISz",
+        "https://remix.gg/blob/l8nDNl52fBh1/orangeminizfo_angles0002-78jqbY5qj8-Kfs9JkoC2uxfsjdnXKSN6Iq0janGVo.webp?RKVs",
+        "https://remix.gg/blob/l8nDNl52fBh1/orangeminizfo_angles0003-LFMkr6G8Eg-tUxauNzLeuZiJQJctrC0hzQB5PNgcv.webp?Swv1",
+        "https://remix.gg/blob/l8nDNl52fBh1/orangeminizfo_angles0004-fmR9UuSoCY-LeIK4u2B9MdPCkAw4DWXlUnzpODYdN.webp?o49p",
+        "https://remix.gg/blob/l8nDNl52fBh1/orangeminizfo_angles0005-GDkeBj9z6F-U9e4ycYvOZ5tUGTelKfVGUU7RB7pjX.webp?ymoj",
+        "https://remix.gg/blob/l8nDNl52fBh1/orangeminizfo_angles0006-7W5eUQWDjK-cFWa0GW820FHywDLxpY6YFVEKNhcIv.webp?5NJ7",
+        "https://remix.gg/blob/l8nDNl52fBh1/orangeminizfo_angles0007-3Io3evxcn8-4LecmKhMdzXbcsq0dtPhGFO1CpVwgO.webp?Tl1r",
+        "https://remix.gg/blob/l8nDNl52fBh1/orangeminizfo_angles0008-dvPpoCyjIX-usCUNY6pkbl8VWHkAZ46J9FNiGxQRA.webp?xcj6",
+        "https://remix.gg/blob/l8nDNl52fBh1/orangeminizfo_angles0009-Q1WsF3rPsj-oA3DGYQQUenio55Fr5rB0KEdmHV1o1.webp?vBPO",
+        "https://remix.gg/blob/l8nDNl52fBh1/orangeminizfo_angles0010-rs12HAwsM3-TGhdpIxIC1DlZ0tAFi1QC1thkcu12F.webp?4psN",
+        "https://remix.gg/blob/l8nDNl52fBh1/orangeminizfo_angles0011-vLvnirW24L-PJ6kqC75pmxqhhY7EMkabS7XQAcx9j.webp?NDOH",
+        "https://remix.gg/blob/l8nDNl52fBh1/orangeminizfo_angles0012-31yaOIpvbL-VCRs7TIc4oHzxh1yx2EM9EgXxnF4v9.webp?YhVh",
+        "https://remix.gg/blob/l8nDNl52fBh1/orangeminizfo_angles0013-Rw5firq8pc-ASKW1eUimIHJhDol1hC3kmTFFwOx73.webp?EHGE",
+
+        // Purple
+        "https://remix.gg/blob/l8nDNl52fBh1/purpleminizfo_angles0001-bEFu2ZJCQj-P8Tr7fHAhLw7T69jdYQZiq5WjJq4S3.webp?HECk",
+        "https://remix.gg/blob/l8nDNl52fBh1/purpleminizfo_angles0002-Apbnyni2y8-cvZMUYIeu054UhEC13pfmGji75TAiw.webp?HqY8",
+        "https://remix.gg/blob/l8nDNl52fBh1/purpleminizfo_angles0003-lRBFE80iN9-DsDHeG4bzMUL58XFv4yuaTHjiIv31k.webp?KCW3",
+        "https://remix.gg/blob/l8nDNl52fBh1/purpleminizfo_angles0004-mBYQJISKXa-YlJlKsSqBHmxDdrbvgSI1YjJgfcdKk.webp?kxN0",
+        "https://remix.gg/blob/l8nDNl52fBh1/purpleminizfo_angles0005-1EUv5VhNLQ-UqqysZ4dXbVPpBD75ZUNx6q1eOlYTH.webp?bIwp",
+        "https://remix.gg/blob/l8nDNl52fBh1/purpleminizfo_angles0006-ia3JLaGB02-dZXlTu4fBLWygAnCiZwjBe1jGX7BcY.webp?4X64",
+        "https://remix.gg/blob/l8nDNl52fBh1/purpleminizfo_angles0007-zu4nV1jb2G-iCOC2aztZZvUbbtdg4HvA8MbtuojQy.webp?aWuz",
+        "https://remix.gg/blob/l8nDNl52fBh1/purpleminizfo_angles0008-zQjMpDdkHs-FRdSluHdW1sxETst0yMrr9BqhNr0ox.webp?CAfu",
+        "https://remix.gg/blob/l8nDNl52fBh1/purpleminizfo_angles0009-4uUANgo9sa-vR2ouHnFRZVyjA7Z86BMJfZ5ovINXh.webp?9eOx",
+        "https://remix.gg/blob/l8nDNl52fBh1/purpleminizfo_angles0010-Ko9D0GbQdQ-XK7OSSFQpjecU2pUVepzs2rbFpUAbP.webp?MBzv",
+        "https://remix.gg/blob/l8nDNl52fBh1/purpleminizfo_angles0011-eZiiVnLrPR-vjaMiwe5ka773SPP7ARE3VfXn7pcwK.webp?utxU",
+        "https://remix.gg/blob/l8nDNl52fBh1/purpleminizfo_angles0012-2a2XLstwus-tlZlR38VfaSA9OgsBqjElcuyFc69ag.webp?SaFz",
+        "https://remix.gg/blob/l8nDNl52fBh1/purpleminizfo_angles0013-8opMSSU2Tt-XRMY8IG63h1IHJgtXJiIMiq3tvAnTc.webp?V5gS",
+
+        // Blue
+        "https://remix.gg/blob/l8nDNl52fBh1/blueminizfo_angles0001-wybaheEkUt-QWW8TQIT0qPizoqHURqYqlcpAQ775H.webp?jNQm",
+        "https://remix.gg/blob/l8nDNl52fBh1/blueminizfo_angles0002-ofEIA9smIu-jhbO5ORaa0WCBDeBdAMYTqbkeX54xn.webp?gn67",
+        "https://remix.gg/blob/l8nDNl52fBh1/blueminizfo_angles0003-oFGgoRhPd8-U9Igc7NXCtivUcy3zbBRfRyvVzviaI.webp?tdYc",
+        "https://remix.gg/blob/l8nDNl52fBh1/blueminizfo_angles0004-RDnR9XJi4w-AqeZnUWKZPYb9LoQgnCToTiVM6cEmj.webp?qQRw",
+        "https://remix.gg/blob/l8nDNl52fBh1/blueminizfo_angles0005-r7aNw1dygc-Wl5agykfXvp9I04jbPfchuwfBFW2YQ.webp?gdhS",
+        "https://remix.gg/blob/l8nDNl52fBh1/blueminizfo_angles0006-XJLfBCuFyW-ITm65Fkfo35sSAdvbyWu23bufn4ZDr.webp?THCs",
+        "https://remix.gg/blob/l8nDNl52fBh1/blueminizfo_angles0007-Za4s6smkBo-66LhsBUNaDyeRk1GRJYwz7r1cmUY7T.webp?jyDh",
+        "https://remix.gg/blob/l8nDNl52fBh1/blueminizfo_angles0008-MNQAn4EkiF-7xfZMx6zRZJPxLpdJNTMAQkdbhQzUR.webp?qgIk",
+        "https://remix.gg/blob/l8nDNl52fBh1/blueminizfo_angles0009-S5EpMn0DRR-5tsseTtGPdYDWymfv9BqgYzrkIwuCR.webp?TQnU",
+        "https://remix.gg/blob/l8nDNl52fBh1/blueminizfo_angles0010-ZZBQmjOSgj-9svgxogCauxuYf2rXmtJHlU7otRKux.webp?rhyw",
+        "https://remix.gg/blob/l8nDNl52fBh1/blueminizfo_angles0011-3s1sW7WXXE-fukKYtXhZAozFPYY4nNXtTqz6qRrJE.webp?ZEJx",
+        "https://remix.gg/blob/l8nDNl52fBh1/blueminizfo_angles0012-wn0KRv0MCb-EzQkbgSpJLDjh3ucd9Uk7Vv9wg4PTU.webp?g0fP",
+        "https://remix.gg/blob/l8nDNl52fBh1/blueminizfo_angles0013-YYLyQDvHPV-ItPRrTR2Xf5Os3ymTcZMTWQJTpTYxX.webp?gcmT"
+      ],
+      // TODO: Provide energy UI frame URLs
+      energy: {
+        normal: [
+          "https://remix.gg/blob/l8nDNl52fBh1/energyasset_00000-KUAoERLCmY-dfKUysdayI6H7RsJpLyZEHqIXO1E59.webp?x3f0",
+          "https://remix.gg/blob/l8nDNl52fBh1/energyasset_00010-Vu6WIq9SaB-fpLGgeJL0KuFuqyrlHp1kcwbEd5Hkw.webp?JLpf",
+          "https://remix.gg/blob/l8nDNl52fBh1/energyasset_00015-seJQES4mwI-mQfVsJ0G1gftb83fYR2NgIA0Egrh1z.webp?qZGH"
+        ],
+        over: [
+          "https://remix.gg/blob/l8nDNl52fBh1/energyassetovercharged_00000-NQd0GtzyB1-Yca74HQkX2qvC48wW4DDW7KZrWFkXe.webp?vcG2"
+        ]
+      }
+    };
+
+    const canvas = document.getElementById("game");
+    const ctx = canvas.getContext("2d");
+    const overlay = document.getElementById("overlay");
+    const scoreEl = document.getElementById("score");
+    const energyEl = document.getElementById("energy");
+
+    const lanes = [150, 300, 450];
+    const state = {
+      mode: "start",
+      score: 0,
+      time: 0,
+      laneIndex: 1,
+      laneTarget: 1,
+      laneShift: 0,
+      playerY: 680,
+      speed: 260,
+      spawnTimer: 0,
+      entities: [],
+      charge: 0,
+      overcharge: 0,
+      energyFrame: 0,
+      energyTimer: 0,
+      inputLocked: false
+    };
+
+    const images = new Map();
+    function loadImage(url) {
+      if (!url) return null;
+      if (images.has(url)) return images.get(url);
+      const img = new Image();
+      img.src = url;
+      images.set(url, img);
+      return img;
+    }
+
+    function preload() {
+      ASSETS.scooter.rearIdle.forEach(loadImage);
+      ASSETS.scooter.rearFast.forEach(loadImage);
+      loadImage(ASSETS.scooter.rearLeft);
+      loadImage(ASSETS.scooter.rearRight);
+      loadImage(ASSETS.scooter.rearStop);
+      ASSETS.enemies.forEach(loadImage);
+      ASSETS.energy.normal.forEach(loadImage);
+      ASSETS.energy.over.forEach(loadImage);
+    }
+
+    function resetGame() {
+      state.mode = "play";
+      state.score = 0;
+      state.time = 0;
+      state.laneIndex = 1;
+      state.laneTarget = 1;
+      state.laneShift = 0;
+      state.spawnTimer = 0;
+      state.entities = [];
+      state.charge = 0;
+      state.overcharge = 0;
+      state.energyFrame = 0;
+      state.energyTimer = 0;
+      state.inputLocked = false;
+      overlay.classList.add("hidden");
+    }
+
+    function gameOver() {
+      if (state.mode !== "play") return;
+      state.mode = "over";
+      overlay.classList.remove("hidden");
+      overlay.querySelector(".title").textContent = "Wiped Out!";
+      overlay.querySelector(".subtitle").textContent = `Score ${state.score}`;
+      overlay.querySelector(".btn").textContent = "Tap to Retry";
+      if (window.FarcadeSDK && window.FarcadeSDK.singlePlayer) {
+        window.FarcadeSDK.singlePlayer.actions.gameOver({ score: state.score });
+      }
+    }
+
+    function laneToX(idx) {
+      return lanes[Math.max(0, Math.min(lanes.length - 1, idx))];
+    }
+
+    function spawnEnemy() {
+      const lane = Math.floor(Math.random() * lanes.length);
+      const spriteUrl = ASSETS.enemies.length
+        ? ASSETS.enemies[Math.floor(Math.random() * ASSETS.enemies.length)]
+        : null;
+      state.entities.push({
+        x: laneToX(lane),
+        y: -80,
+        r: 36,
+        lane,
+        spriteUrl,
+        hit: false
+      });
+    }
+
+    function update(dt) {
+      if (state.mode !== "play") return;
+      state.time += dt;
+      state.spawnTimer -= dt;
+      const spawnRate = state.overcharge > 0 ? 0.4 : 0.65;
+      if (state.spawnTimer <= 0) {
+        spawnEnemy();
+        state.spawnTimer = spawnRate;
+      }
+
+      // charge buildup
+      if (state.overcharge <= 0) {
+        state.charge = Math.min(1, state.charge + dt * 0.08);
+        if (state.charge >= 1) {
+          state.overcharge = 3.5;
+          state.charge = 0;
+          if (window.FarcadeSDK) window.FarcadeSDK.hapticFeedback();
+        }
+      } else {
+        state.overcharge -= dt;
+      }
+
+      // lane shift
+      const targetX = laneToX(state.laneTarget);
+      const currentX = laneToX(state.laneIndex) + state.laneShift;
+      const diff = targetX - currentX;
+      const move = Math.sign(diff) * Math.min(Math.abs(diff), dt * 720);
+      state.laneShift += move;
+      if (Math.abs(diff) < 2) {
+        state.laneIndex = state.laneTarget;
+        state.laneShift = 0;
+      }
+
+      // move enemies
+      state.entities.forEach((e) => {
+        e.y += (state.speed + (state.overcharge > 0 ? 120 : 0)) * dt;
+      });
+      state.entities = state.entities.filter((e) => e.y < 980 && !e.hit);
+
+      // collisions
+      const playerX = laneToX(state.laneIndex) + state.laneShift;
+      const playerR = 38;
+      for (const e of state.entities) {
+        const dx = e.x - playerX;
+        const dy = e.y - state.playerY;
+        const dist = Math.hypot(dx, dy);
+        if (dist < playerR + e.r) {
+          if (state.overcharge > 0) {
+            e.hit = true;
+            state.score += 5;
+            if (window.FarcadeSDK) window.FarcadeSDK.hapticFeedback();
+          } else {
+            gameOver();
+            break;
+          }
+        }
+      }
+
+      // score
+      state.score += Math.floor(dt * 12);
+      scoreEl.textContent = `SCORE ${state.score}`;
+
+      // energy UI frame
+      state.energyTimer += dt;
+      if (state.energyTimer > 0.1) {
+        state.energyTimer = 0;
+        state.energyFrame = (state.energyFrame + 1) % 4;
+      }
+      const energyFrames = state.overcharge > 0 ? ASSETS.energy.over : ASSETS.energy.normal;
+      if (energyFrames.length) {
+        const frameIdx = state.energyFrame % energyFrames.length;
+        energyEl.src = energyFrames[frameIdx];
+      }
+    }
+
+    function drawBackground() {
+      const g = ctx.createLinearGradient(0, 0, 0, canvas.height);
+      g.addColorStop(0, "#0f2036");
+      g.addColorStop(1, "#0a1424");
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      ctx.fillStyle = "#142a42";
+      ctx.fillRect(90, 0, 420, canvas.height);
+
+      ctx.strokeStyle = "rgba(255,255,255,0.25)";
+      ctx.lineWidth = 4;
+      ctx.setLineDash([22, 22]);
+      [220, 380].forEach((x) => {
+        ctx.beginPath();
+        ctx.moveTo(x, -40 + (state.time * 180) % 44);
+        ctx.lineTo(x, canvas.height);
+        ctx.stroke();
+      });
+      ctx.setLineDash([]);
+    }
+
+    function drawPlayer() {
+      let spriteUrl = ASSETS.scooter.rearIdle[Math.floor(state.time * 8) % ASSETS.scooter.rearIdle.length];
+      if (state.overcharge > 0) {
+        spriteUrl = ASSETS.scooter.rearFast[Math.floor(state.time * 10) % ASSETS.scooter.rearFast.length];
+      }
+      if (state.laneShift < -5) spriteUrl = ASSETS.scooter.rearLeft;
+      if (state.laneShift > 5) spriteUrl = ASSETS.scooter.rearRight;
+      if (state.mode === "over") spriteUrl = ASSETS.scooter.rearStop;
+
+      const img = loadImage(spriteUrl);
+      const w = 160;
+      const h = 160;
+      const x = laneToX(state.laneIndex) + state.laneShift - w / 2;
+      const y = state.playerY - h / 2;
+      if (img && img.complete) {
+        ctx.drawImage(img, x, y, w, h);
+      } else {
+        ctx.fillStyle = "#62d9ff";
+        ctx.fillRect(x, y, w, h);
+      }
+    }
+
+    function drawEnemies() {
+      state.entities.forEach((e) => {
+        const img = e.spriteUrl ? loadImage(e.spriteUrl) : null;
+        const size = 90;
+        if (img && img.complete) {
+          ctx.drawImage(img, e.x - size / 2, e.y - size / 2, size, size);
+        } else {
+          ctx.fillStyle = "#ff6b6b";
+          ctx.beginPath();
+          ctx.arc(e.x, e.y, 30, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      });
+    }
+
+    function render() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      drawBackground();
+      drawEnemies();
+      drawPlayer();
+    }
+
+    function loop(ts) {
+      if (!state.last) state.last = ts;
+      const dt = Math.min(0.033, (ts - state.last) / 1000);
+      state.last = ts;
+      update(dt);
+      render();
+      requestAnimationFrame(loop);
+    }
+
+    function handleMove(dir) {
+      if (state.mode !== "play") return;
+      const next = Math.max(0, Math.min(lanes.length - 1, state.laneTarget + dir));
+      if (next !== state.laneTarget) {
+        state.laneTarget = next;
+        if (window.FarcadeSDK) window.FarcadeSDK.hapticFeedback();
+      }
+    }
+
+    let touchStartX = 0;
+    canvas.addEventListener("pointerdown", (e) => {
+      touchStartX = e.clientX;
+      if (state.mode !== "play") {
+        resetGame();
+        return;
+      }
+    });
+    canvas.addEventListener("pointerup", (e) => {
+      if (state.mode !== "play") return;
+      const dx = e.clientX - touchStartX;
+      if (Math.abs(dx) > 40) {
+        handleMove(dx > 0 ? 1 : -1);
+      }
+    });
+
+    window.addEventListener("keydown", (e) => {
+      if (e.key === "ArrowLeft") handleMove(-1);
+      if (e.key === "ArrowRight") handleMove(1);
+      if (e.key === "f") {
+        if (!document.fullscreenElement) {
+          canvas.requestFullscreen().catch(() => {});
+        } else {
+          document.exitFullscreen().catch(() => {});
+        }
+      }
+    });
+
+    // Farcade SDK integration
+    window.FarcadeSDK?.onPlayAgain(() => {
+      resetGame();
+    });
+
+    window.FarcadeSDK?.onToggleMute((data) => {
+      // If audio is added later, toggle it here based on data.isMuted
+    });
+
+    // Deterministic stepping for automated tests
+    window.advanceTime = (ms) => {
+      const steps = Math.max(1, Math.round(ms / (1000 / 60)));
+      for (let i = 0; i < steps; i++) update(1 / 60);
+      render();
+    };
+
+    window.render_game_to_text = () => {
+      const payload = {
+        mode: state.mode,
+        score: state.score,
+        lane: state.laneIndex,
+        overcharge: state.overcharge > 0,
+        charge: state.charge,
+        player: {
+          x: laneToX(state.laneIndex) + state.laneShift,
+          y: state.playerY,
+          r: 38
+        },
+        enemies: state.entities.map((e) => ({ x: e.x, y: e.y, r: e.r })),
+        coords: "origin top-left, +x right, +y down"
+      };
+      return JSON.stringify(payload);
+    };
+
+    preload();
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>
