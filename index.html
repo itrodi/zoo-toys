@@ -2040,8 +2040,8 @@
         }
         if (Math.abs(enemy.sprite.position.z - playerZ) < 1.4 && Math.abs(enemy.sprite.position.x - state.playerX) < 1.3) {
           if (state.overcharge > 0) {
-            scene.remove(enemy.sprite);
-            state.enemies.splice(i, 1);
+            resetEnemy(enemy);
+            playSound("hit");
             window.FarcadeSDK?.hapticFeedback();
           } else {
             damagePlayer();
@@ -2058,17 +2058,20 @@
 
       if (visibleCount > 0) {
         state.lastEnemySeenTime = state.time;
-      } else if (state.time - state.lastEnemySeenTime > 0.6 || visibleCount < 2) {
+      }
+      if ((visibleCount === 0 && state.time - state.lastEnemySeenTime > 0.6) || visibleCount < 2) {
         // Force enemies back into view to avoid dead air.
         let injected = 0;
         for (let i = 0; i < activeEnemies && injected < 3; i++) {
           const enemy = state.enemies[i];
-          enemy.sprite.position.set(laneX(), surfaceY + 0.2, -50 - injected * 16);
-          enemy.pattern = pickPattern();
-          enemy.shootTimer = 0.7 + Math.random() * 0.4;
-          injected += 1;
+          if (enemy.sprite.position.z > -8 || enemy.sprite.position.z < -150) {
+            enemy.sprite.position.set(laneX(), surfaceY + 0.2, -50 - injected * 16);
+            enemy.pattern = pickPattern();
+            enemy.shootTimer = 0.7 + Math.random() * 0.4;
+            injected += 1;
+          }
         }
-        state.lastEnemySeenTime = state.time;
+        if (visibleCount === 0) state.lastEnemySeenTime = state.time;
       }
 
       // bullet vs enemy collisions (charged bullets have larger blast)
@@ -2082,12 +2085,12 @@
           const dz = enemy.sprite.position.z - bullet.position.z;
           const dist = Math.hypot(dx, dz);
           if (dist < blast) {
-            scene.remove(enemy.sprite);
-            state.enemies.splice(i, 1);
+            resetEnemy(enemy);
             hit = true;
           }
         }
         if (hit) {
+          playSound("hit");
           const pierce = bullet.userData?.pierce || 0;
           if (pierce > 0) {
             bullet.userData.pierce -= 1;
