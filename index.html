@@ -1106,7 +1106,7 @@
     let playerSprite;
     let bulletGeom, bulletMat, bulletMatCharged;
     let enemyBulletGeom, enemyBulletMat;
-    let powerupGeom, powerupMat;
+    const powerupStyles = {};
     let shieldMesh;
     let skyDome, sunMesh;
     const farBuildings = [];
@@ -1570,8 +1570,18 @@
       bulletMatCharged = new THREE.MeshBasicMaterial({ color: 0x66f2ff });
       enemyBulletGeom = new THREE.SphereGeometry(0.1, 8, 8);
       enemyBulletMat = new THREE.MeshBasicMaterial({ color: 0xff6b6b });
-      powerupGeom = new THREE.OctahedronGeometry(0.45, 0);
-      powerupMat = new THREE.MeshStandardMaterial({ color: 0x66f2ff, emissive: 0x66f2ff, emissiveIntensity: 0.6 });
+      powerupStyles.shield = {
+        geom: new THREE.TorusGeometry(0.4, 0.12, 8, 16),
+        mat: new THREE.MeshStandardMaterial({ color: 0x66f2ff, emissive: 0x66f2ff, emissiveIntensity: 0.6 })
+      };
+      powerupStyles.ammo = {
+        geom: new THREE.BoxGeometry(0.5, 0.5, 0.5),
+        mat: new THREE.MeshStandardMaterial({ color: 0xffa500, emissive: 0xffa500, emissiveIntensity: 0.6 })
+      };
+      powerupStyles.health = {
+        geom: new THREE.OctahedronGeometry(0.45, 0),
+        mat: new THREE.MeshStandardMaterial({ color: 0xff4466, emissive: 0xff4466, emissiveIntensity: 0.6 })
+      };
 
       shieldMesh = new THREE.Mesh(
         new THREE.TorusGeometry(1.1, 0.08, 8, 20),
@@ -1780,14 +1790,15 @@
     }
 
     function spawnPowerup() {
-      const orb = new THREE.Mesh(powerupGeom, powerupMat);
-      orb.position.set((Math.random() * 2 - 1) * (roadWidth * 0.4), surfaceY + 0.5, -50 - Math.random() * 80);
       let type = "shield";
       const roll = Math.random();
       if (state.ammo <= 4 && roll < 0.6) type = "ammo";
       else if (state.health < state.maxHealth * 0.6 && roll < 0.8) type = "health";
       else if (roll < 0.4) type = "ammo";
       else if (roll < 0.7) type = "health";
+      const style = powerupStyles[type];
+      const orb = new THREE.Mesh(style.geom, style.mat);
+      orb.position.set((Math.random() * 2 - 1) * (roadWidth * 0.4), surfaceY + 0.5, -50 - Math.random() * 80);
       orb.userData = { type, spin: Math.random() * 2 + 0.5 };
       scene.add(orb);
       state.powerups.push(orb);
