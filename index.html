@@ -3,15 +3,10 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
-  <title>Overcharge Dash</title>
+  <title>Overcharge Dash 3D</title>
   <style>
     :root {
-      --bg1: #0b1a2a;
-      --bg2: #18324d;
-      --lane: #1f3b5a;
-      --lane-line: rgba(255,255,255,0.35);
       --accent: #36f1d2;
-      --danger: #ff5f5f;
       --text: #e9f2ff;
     }
     * { box-sizing: border-box; }
@@ -20,7 +15,7 @@
       padding: 0;
       width: 100%;
       height: 100%;
-      background: radial-gradient(circle at 30% 20%, #1a2f4a 0%, #0b1320 60%, #070b12 100%);
+      background: radial-gradient(circle at 30% 20%, #bfe6ff 0%, #7db7e8 55%, #3e6b9e 100%);
       font-family: "Trebuchet MS", "Verdana", sans-serif;
       color: var(--text);
       overflow: hidden;
@@ -33,12 +28,23 @@
       align-items: center;
       justify-content: center;
     }
-    #game {
+    #frame {
       width: min(90vw, 60vh);
       aspect-ratio: 2 / 3;
-      background: #0b1320;
+      position: relative;
       border-radius: 18px;
+      overflow: hidden;
+      background: #101b2b;
       box-shadow: 0 18px 40px rgba(0,0,0,0.35), inset 0 0 0 2px rgba(255,255,255,0.05);
+    }
+    #game {
+      width: 100%;
+      height: 100%;
+    }
+    #game canvas {
+      width: 100% !important;
+      height: 100% !important;
+      display: block;
     }
     #hud {
       position: absolute;
@@ -52,11 +58,31 @@
     }
     #topbar {
       width: 100%;
-      display: flex;
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
       align-items: center;
-      justify-content: space-between;
       font-size: 14px;
       letter-spacing: 0.5px;
+      gap: 8px;
+    }
+    #score { justify-self: start; }
+    #energy { justify-self: end; }
+    #health {
+      justify-self: center;
+      width: 120px;
+      height: 10px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.2);
+      overflow: hidden;
+      border: 1px solid rgba(255,255,255,0.35);
+      box-shadow: inset 0 0 6px rgba(0,0,0,0.25);
+    }
+    #healthFill {
+      height: 100%;
+      width: 100%;
+      background: linear-gradient(90deg, #ff5f5f, #ffb347);
+      box-shadow: 0 0 10px rgba(255,95,95,0.45);
+      transition: width 0.12s linear;
     }
     #energy {
       width: 120px;
@@ -71,51 +97,66 @@
       justify-content: center;
       text-align: center;
       padding: 16px;
-      background: linear-gradient(180deg, rgba(8,15,25,0.9), rgba(8,15,25,0.75));
+      background: radial-gradient(circle at 50% 30%, rgba(255,255,255,0.18), rgba(16,28,48,0.82));
     }
     #overlay.hidden { display: none; }
     .card {
-      max-width: 320px;
-      background: rgba(12,20,32,0.8);
-      border: 1px solid rgba(255,255,255,0.08);
-      border-radius: 16px;
-      padding: 18px;
-      box-shadow: 0 10px 24px rgba(0,0,0,0.4);
+      max-width: 340px;
+      background: linear-gradient(160deg, rgba(24,44,70,0.92), rgba(10,22,40,0.86));
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 18px;
+      padding: 20px;
+      box-shadow: 0 18px 40px rgba(0,0,0,0.45);
+      backdrop-filter: blur(10px);
     }
-    .title { font-size: 20px; margin-bottom: 6px; }
-    .subtitle { font-size: 14px; opacity: 0.8; margin-bottom: 12px; }
+    .card::before {
+      content: "";
+      display: block;
+      width: 48px;
+      height: 4px;
+      margin: 0 auto 12px auto;
+      border-radius: 999px;
+      background: linear-gradient(90deg, rgba(102,242,255,0.1), rgba(102,242,255,0.9), rgba(102,242,255,0.1));
+      box-shadow: 0 0 12px rgba(102,242,255,0.6);
+    }
+    .title { font-size: 22px; margin-bottom: 6px; letter-spacing: 0.6px; }
+    .subtitle { font-size: 14px; opacity: 0.85; margin-bottom: 14px; }
     .btn {
       display: inline-block;
       padding: 10px 16px;
       border-radius: 999px;
-      background: var(--accent);
+      background: linear-gradient(135deg, #66f2ff, #2be7c1);
       color: #0b1320;
       font-weight: 700;
+      box-shadow: 0 10px 20px rgba(43,231,193,0.35);
     }
   </style>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@farcade/game-sdk@latest/dist/index.min.js"></script>
 </head>
 <body>
   <div id="wrap">
-    <canvas id="game" width="600" height="900"></canvas>
-    <div id="hud">
-      <div id="topbar">
-        <div id="score">SCORE 0</div>
-        <img id="energy" alt="energy" />
+    <div id="frame">
+      <div id="game"></div>
+      <div id="hud">
+        <div id="topbar">
+          <div id="score">DIST 0m  TIME 0.0s</div>
+          <div id="health"><div id="healthFill"></div></div>
+          <img id="energy" alt="energy" />
+        </div>
+        <div id="hint" style="font-size:12px;opacity:0.8;">Drag to steer, tap to shoot. Grab shields to absorb hits.</div>
       </div>
-      <div id="hint" style="font-size:12px;opacity:0.8;">Swipe or drag to change lanes</div>
-    </div>
-    <div id="overlay">
-      <div class="card">
-        <div class="title">Overcharge Dash</div>
-        <div class="subtitle">Dodge drones, build charge, then blast through them.</div>
-        <div class="btn">Tap to Start</div>
+      <div id="overlay">
+        <div class="card">
+          <div class="title">Overcharge Dash 3D</div>
+          <div class="subtitle">Race forever. Overcharge unlocks mega shots. Grab shields.</div>
+          <div class="btn">Tap to Start</div>
+        </div>
       </div>
     </div>
   </div>
 
   <script>
-    // Asset URLs
     const ASSETS = {
       scooter: {
         rearIdle: [
@@ -134,7 +175,6 @@
         rearStop: "https://remix.gg/blob/l8nDNl52fBh1/scootercometstarlight_rear3quarter_stop-hAIEl26qBJ-IO5oIrxX3CwpFiynArQbEZ6UylqLrG.webp?QeDG"
       },
       enemies: [
-        // Orange
         "https://remix.gg/blob/l8nDNl52fBh1/orangeminizfo_angles0001-ILPVDym5Jf-nDW5rlcgUaHM073ITVTFUZieog0Vjc.webp?NISz",
         "https://remix.gg/blob/l8nDNl52fBh1/orangeminizfo_angles0002-78jqbY5qj8-Kfs9JkoC2uxfsjdnXKSN6Iq0janGVo.webp?RKVs",
         "https://remix.gg/blob/l8nDNl52fBh1/orangeminizfo_angles0003-LFMkr6G8Eg-tUxauNzLeuZiJQJctrC0hzQB5PNgcv.webp?Swv1",
@@ -148,8 +188,6 @@
         "https://remix.gg/blob/l8nDNl52fBh1/orangeminizfo_angles0011-vLvnirW24L-PJ6kqC75pmxqhhY7EMkabS7XQAcx9j.webp?NDOH",
         "https://remix.gg/blob/l8nDNl52fBh1/orangeminizfo_angles0012-31yaOIpvbL-VCRs7TIc4oHzxh1yx2EM9EgXxnF4v9.webp?YhVh",
         "https://remix.gg/blob/l8nDNl52fBh1/orangeminizfo_angles0013-Rw5firq8pc-ASKW1eUimIHJhDol1hC3kmTFFwOx73.webp?EHGE",
-
-        // Purple
         "https://remix.gg/blob/l8nDNl52fBh1/purpleminizfo_angles0001-bEFu2ZJCQj-P8Tr7fHAhLw7T69jdYQZiq5WjJq4S3.webp?HECk",
         "https://remix.gg/blob/l8nDNl52fBh1/purpleminizfo_angles0002-Apbnyni2y8-cvZMUYIeu054UhEC13pfmGji75TAiw.webp?HqY8",
         "https://remix.gg/blob/l8nDNl52fBh1/purpleminizfo_angles0003-lRBFE80iN9-DsDHeG4bzMUL58XFv4yuaTHjiIv31k.webp?KCW3",
@@ -163,8 +201,6 @@
         "https://remix.gg/blob/l8nDNl52fBh1/purpleminizfo_angles0011-eZiiVnLrPR-vjaMiwe5ka773SPP7ARE3VfXn7pcwK.webp?utxU",
         "https://remix.gg/blob/l8nDNl52fBh1/purpleminizfo_angles0012-2a2XLstwus-tlZlR38VfaSA9OgsBqjElcuyFc69ag.webp?SaFz",
         "https://remix.gg/blob/l8nDNl52fBh1/purpleminizfo_angles0013-8opMSSU2Tt-XRMY8IG63h1IHJgtXJiIMiq3tvAnTc.webp?V5gS",
-
-        // Blue
         "https://remix.gg/blob/l8nDNl52fBh1/blueminizfo_angles0001-wybaheEkUt-QWW8TQIT0qPizoqHURqYqlcpAQ775H.webp?jNQm",
         "https://remix.gg/blob/l8nDNl52fBh1/blueminizfo_angles0002-ofEIA9smIu-jhbO5ORaa0WCBDeBdAMYTqbkeX54xn.webp?gn67",
         "https://remix.gg/blob/l8nDNl52fBh1/blueminizfo_angles0003-oFGgoRhPd8-U9Igc7NXCtivUcy3zbBRfRyvVzviaI.webp?tdYc",
@@ -179,7 +215,6 @@
         "https://remix.gg/blob/l8nDNl52fBh1/blueminizfo_angles0012-wn0KRv0MCb-EzQkbgSpJLDjh3ucd9Uk7Vv9wg4PTU.webp?g0fP",
         "https://remix.gg/blob/l8nDNl52fBh1/blueminizfo_angles0013-YYLyQDvHPV-ItPRrTR2Xf5Os3ymTcZMTWQJTpTYxX.webp?gcmT"
       ],
-      // TODO: Provide energy UI frame URLs
       energy: {
         normal: [
           "https://remix.gg/blob/l8nDNl52fBh1/energyasset_00000-KUAoERLCmY-dfKUysdayI6H7RsJpLyZEHqIXO1E59.webp?x3f0",
@@ -189,300 +224,2005 @@
         over: [
           "https://remix.gg/blob/l8nDNl52fBh1/energyassetovercharged_00000-NQd0GtzyB1-Yca74HQkX2qvC48wW4DDW7KZrWFkXe.webp?vcG2"
         ]
+      },
+      audio: {
+        bgm: "https://remix.gg/blob/Vc4D7oEsv5f8/sergequadrado-fast-rocky-loop-275535-2qh1uabSsN-fzrzyqcqBQofu3R1cS2M3lWacmslIO.mp3?M0SX",
+        engine: "https://remix.gg/blob/Vc4D7oEsv5f8/freesound_community-engine-6000-1VqSv6rcwf-ZULBryVPAxP356o2sOGkUjXPiQD70e.mp3?loUy",
+        shoot: "https://remix.gg/blob/Vc4D7oEsv5f8/freesound_community-laser-shoot-38126-WNm36VVHQj-rmKupHok7ifBr6slOeE0d6BDtb6gxD.mp3?yaI5",
+        hit: "https://remix.gg/blob/Vc4D7oEsv5f8/11325622-metal-hit-sound-effect-241374-atV0cbKE5l-d1vIg3r7Itxp3L4oFVWaDM8cUap9Mo.mp3?Q8hJ",
+        overcharge: "https://remix.gg/blob/Vc4D7oEsv5f8/driken5482-retro-powerup-1-236686-svqL8RhKCt-ZiwIZNLw44pO6zwyuIweERyr4WVHUR.mp3?vofF",
+        pickup: "https://remix.gg/blob/Vc4D7oEsv5f8/freesound_community-powerup-41954-Gtgs8OebIO-woXgTlXI2p8rEgCvVXe9SaaIgxxApy.mp3?sfgB",
+        crash: "https://remix.gg/blob/Vc4D7oEsv5f8/dragon-studio-car-crash-sound-376882-f4nD5ZvNsM-j6omyT2Bx5vhSs4DWs65MKghUPzTRP.mp3?Ar39"
       }
     };
 
-    const canvas = document.getElementById("game");
-    const ctx = canvas.getContext("2d");
-    const overlay = document.getElementById("overlay");
+    const KENNEY_GLTFS = {
+  road: `{
+  "accessors": [
+    {
+      "name": "Mesh1 Group1 Model_1_positions",
+      "componentType": 5126,
+      "count": 44,
+      "min": [
+        0,
+        0,
+        -3
+      ],
+      "max": [
+        3,
+        0.6000000238418579,
+        0
+      ],
+      "type": "VEC3",
+      "bufferView": 0,
+      "byteOffset": 0
+    },
+    {
+      "name": "Mesh1 Group1 Model_1_normals",
+      "componentType": 5126,
+      "count": 44,
+      "min": [
+        -1,
+        -1,
+        -1
+      ],
+      "max": [
+        1,
+        1,
+        1
+      ],
+      "type": "VEC3",
+      "bufferView": 0,
+      "byteOffset": 528
+    },
+    {
+      "name": "Mesh1 Group1 Model_1_texcoords",
+      "componentType": 5126,
+      "count": 44,
+      "min": [
+        -118.11000061035156,
+        -117.11000061035156
+      ],
+      "max": [
+        3,
+        1
+      ],
+      "type": "VEC2",
+      "bufferView": 1,
+      "byteOffset": 0
+    },
+    {
+      "name": "Mesh1 Group1 Model_1_0_indices",
+      "componentType": 5123,
+      "count": 30,
+      "min": [
+        0
+      ],
+      "max": [
+        35
+      ],
+      "type": "SCALAR",
+      "bufferView": 2,
+      "byteOffset": 0
+    },
+    {
+      "name": "Mesh1 Group1 Model_1_1_indices",
+      "componentType": 5123,
+      "count": 30,
+      "min": [
+        12
+      ],
+      "max": [
+        43
+      ],
+      "type": "SCALAR",
+      "bufferView": 2,
+      "byteOffset": 60
+    },
+    {
+      "name": "Mesh1 Group1 Model_1_2_indices",
+      "componentType": 5123,
+      "count": 6,
+      "min": [
+        36
+      ],
+      "max": [
+        39
+      ],
+      "type": "SCALAR",
+      "bufferView": 2,
+      "byteOffset": 120
+    }
+  ],
+  "asset": {
+    "generator": "obj2gltf",
+    "version": "2.0"
+  },
+  "buffers": [
+    {
+      "name": "roadTile_034",
+      "byteLength": 1540,
+      "uri": "data:application/octet-stream;base64,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"
+    }
+  ],
+  "bufferViews": [
+    {
+      "name": "bufferView_0",
+      "buffer": 0,
+      "byteLength": 1056,
+      "byteOffset": 0,
+      "byteStride": 12,
+      "target": 34962
+    },
+    {
+      "name": "bufferView_1",
+      "buffer": 0,
+      "byteLength": 352,
+      "byteOffset": 1056,
+      "byteStride": 8,
+      "target": 34962
+    },
+    {
+      "name": "bufferView_2",
+      "buffer": 0,
+      "byteLength": 132,
+      "byteOffset": 1408,
+      "target": 34963
+    }
+  ],
+  "materials": [
+    {
+      "name": "Asphalt",
+      "pbrMetallicRoughness": {
+        "baseColorFactor": [
+          0.411765,
+          0.411765,
+          0.411765,
+          1
+        ],
+        "metallicFactor": 0,
+        "roughnessFactor": 1
+      },
+      "emissiveFactor": [
+        0,
+        0,
+        0
+      ],
+      "alphaMode": "OPAQUE",
+      "doubleSided": false
+    },
+    {
+      "name": "Stone",
+      "pbrMetallicRoughness": {
+        "baseColorFactor": [
+          0.847059,
+          0.827451,
+          0.74902,
+          1
+        ],
+        "metallicFactor": 0,
+        "roughnessFactor": 1
+      },
+      "emissiveFactor": [
+        0,
+        0,
+        0
+      ],
+      "alphaMode": "OPAQUE",
+      "doubleSided": false
+    },
+    {
+      "name": "FrontColor",
+      "pbrMetallicRoughness": {
+        "baseColorFactor": [
+          1,
+          1,
+          1,
+          1
+        ],
+        "metallicFactor": 0,
+        "roughnessFactor": 1
+      },
+      "emissiveFactor": [
+        0,
+        0,
+        0
+      ],
+      "alphaMode": "OPAQUE",
+      "doubleSided": false
+    }
+  ],
+  "meshes": [
+    {
+      "name": "Mesh1 Group1 Model_1",
+      "primitives": [
+        {
+          "attributes": {
+            "POSITION": 0,
+            "NORMAL": 1,
+            "TEXCOORD_0": 2
+          },
+          "indices": 3,
+          "material": 0,
+          "mode": 4
+        },
+        {
+          "attributes": {
+            "POSITION": 0,
+            "NORMAL": 1,
+            "TEXCOORD_0": 2
+          },
+          "indices": 4,
+          "material": 1,
+          "mode": 4
+        },
+        {
+          "attributes": {
+            "POSITION": 0,
+            "NORMAL": 1,
+            "TEXCOORD_0": 2
+          },
+          "indices": 5,
+          "material": 2,
+          "mode": 4
+        }
+      ]
+    }
+  ],
+  "nodes": [
+    {
+      "name": "Mesh1 Group1 Model",
+      "mesh": 0
+    }
+  ],
+  "scene": 0,
+  "scenes": [
+    {
+      "nodes": [
+        0
+      ]
+    }
+  ]
+}
+`,
+  grass: `{
+  "accessors": [
+    {
+      "name": "Mesh1 Group1 Model_1_positions",
+      "componentType": 5126,
+      "count": 24,
+      "min": [
+        0,
+        0,
+        -3
+      ],
+      "max": [
+        3,
+        0.550000011920929,
+        0
+      ],
+      "type": "VEC3",
+      "bufferView": 0,
+      "byteOffset": 0
+    },
+    {
+      "name": "Mesh1 Group1 Model_1_normals",
+      "componentType": 5126,
+      "count": 24,
+      "min": [
+        -1,
+        -1,
+        -1
+      ],
+      "max": [
+        1,
+        1,
+        1
+      ],
+      "type": "VEC3",
+      "bufferView": 0,
+      "byteOffset": 288
+    },
+    {
+      "name": "Mesh1 Group1 Model_1_texcoords",
+      "componentType": 5126,
+      "count": 24,
+      "min": [
+        -3,
+        -2
+      ],
+      "max": [
+        3,
+        1
+      ],
+      "type": "VEC2",
+      "bufferView": 1,
+      "byteOffset": 0
+    },
+    {
+      "name": "Mesh1 Group1 Model_1_0_indices",
+      "componentType": 5123,
+      "count": 36,
+      "min": [
+        0
+      ],
+      "max": [
+        23
+      ],
+      "type": "SCALAR",
+      "bufferView": 2,
+      "byteOffset": 0
+    }
+  ],
+  "asset": {
+    "generator": "obj2gltf",
+    "version": "2.0"
+  },
+  "buffers": [
+    {
+      "name": "roadTile_163",
+      "byteLength": 840,
+      "uri": "data:application/octet-stream;base64,AABAQM3MDD8AAEDAAABAQAAAAAAAAEDAAAAAAAAAAAAAAEDAAAAAAM3MDD8AAEDAAABAQAAAAAAYFmqpAABAQAAAAAAAAEDAAABAQM3MDD8AAEDAAABAQM3MDD8YFmqpAABAQAAAAAAYFmqpGBZqKQAAAAAAAACAAAAAAAAAAAAAAEDAAABAQAAAAAAAAEDAGBZqKc3MDD8AAACAGBZqKQAAAAAAAACAAABAQAAAAAAYFmqpAABAQM3MDD8YFmqpAAAAAAAAAAAAAEDAGBZqKQAAAAAAAACAGBZqKc3MDD8AAACAAAAAAM3MDD8AAEDAAAAAAM3MDD8AAEDAGBZqKc3MDD8AAACAAABAQM3MDD8YFmqpAABAQM3MDD8AAEDAr6qTqAAAAAAAAIC/r6qTqAAAAAAAAIC/r6qTqAAAAAAAAIC/r6qTqAAAAAAAAIC/AACAP291KQ7Ut4qoAACAP291KQ7Ut4qoAACAP291KQ7Ut4qoAACAP291KQ7Ut4qou3HICAAAgL8jLt2Iu3HICAAAgL8jLt2Iu3HICAAAgL8jLt2Iu3HICAAAgL8jLt2Ir6qTKAAAAAAAAIA/r6qTKAAAAAAAAIA/r6qTKAAAAAAAAIA/r6qTKAAAAAAAAIA/AACAv2DBCA4QDpQoAACAv2DBCA4QDpQoAACAv2DBCA4QDpQoAACAv2DBCA4QDpQoAAAAgAAAgD/M0/iKAAAAgAAAgD/M0/iKAAAAgAAAgD/M0/iKAAAAgAAAgD/M0/iKAABAwGZm5j4AAEDAAACAPwaAXakAAIA/BoBdqWZm5j6mE9AnAACAPwAAQEAAAIA/AABAQGZm5j6mE9AnZmbmPgAAQMAAAIA/GBZqqQAAgD8AAAAAAAAAwAAAQMAAAADAGBZqKWZm5j4YFmopAACAPwAAQEAAAIA/AABAQGZm5j4AAEDAAACAP5FhhxIAAIA/kWGHEmZm5j4AAEDAZmbmPgAAAAAAAADAGBZqKQAAgD8AAEBAAACAPwAAQEAAAADAAAABAAIAAAACAAMABAAFAAYABAAGAAcACAAJAAoACAAKAAsADAANAA4ADAAOAA8AEAARABIAEAASABMAFAAVABYAFAAWABcA"
+    }
+  ],
+  "bufferViews": [
+    {
+      "name": "bufferView_0",
+      "buffer": 0,
+      "byteLength": 576,
+      "byteOffset": 0,
+      "byteStride": 12,
+      "target": 34962
+    },
+    {
+      "name": "bufferView_1",
+      "buffer": 0,
+      "byteLength": 192,
+      "byteOffset": 576,
+      "byteStride": 8,
+      "target": 34962
+    },
+    {
+      "name": "bufferView_2",
+      "buffer": 0,
+      "byteLength": 72,
+      "byteOffset": 768,
+      "target": 34963
+    }
+  ],
+  "materials": [
+    {
+      "name": "Grass",
+      "pbrMetallicRoughness": {
+        "baseColorFactor": [
+          0.541176,
+          0.709804,
+          0.286275,
+          1
+        ],
+        "metallicFactor": 0,
+        "roughnessFactor": 1
+      },
+      "emissiveFactor": [
+        0,
+        0,
+        0
+      ],
+      "alphaMode": "OPAQUE",
+      "doubleSided": false
+    }
+  ],
+  "meshes": [
+    {
+      "name": "Mesh1 Group1 Model_1",
+      "primitives": [
+        {
+          "attributes": {
+            "POSITION": 0,
+            "NORMAL": 1,
+            "TEXCOORD_0": 2
+          },
+          "indices": 3,
+          "material": 0,
+          "mode": 4
+        }
+      ]
+    }
+  ],
+  "nodes": [
+    {
+      "name": "Mesh1 Group1 Model",
+      "mesh": 0
+    }
+  ],
+  "scene": 0,
+  "scenes": [
+    {
+      "nodes": [
+        0
+      ]
+    }
+  ]
+}
+`,
+  hillA: `{
+  "accessors": [
+    {
+      "name": "Mesh1 Group1 Model_1_positions",
+      "componentType": 5126,
+      "count": 133,
+      "min": [
+        0,
+        0,
+        -0.9336599707603455
+      ],
+      "max": [
+        0.8085730075836182,
+        2.5308899879455566,
+        0
+      ],
+      "type": "VEC3",
+      "bufferView": 0,
+      "byteOffset": 0
+    },
+    {
+      "name": "Mesh1 Group1 Model_1_normals",
+      "componentType": 5126,
+      "count": 133,
+      "min": [
+        -1,
+        -1,
+        -0.998665988445282
+      ],
+      "max": [
+        1,
+        1,
+        0.998665988445282
+      ],
+      "type": "VEC3",
+      "bufferView": 0,
+      "byteOffset": 1596
+    },
+    {
+      "name": "Mesh1 Group1 Model_1_texcoords",
+      "componentType": 5126,
+      "count": 133,
+      "min": [
+        -0.8169530034065247,
+        -1.5308899879455566
+      ],
+      "max": [
+        0.8169530034065247,
+        1.028875470161438
+      ],
+      "type": "VEC2",
+      "bufferView": 1,
+      "byteOffset": 0
+    },
+    {
+      "name": "Mesh1 Group1 Model_1_0_indices",
+      "componentType": 5123,
+      "count": 180,
+      "min": [
+        0
+      ],
+      "max": [
+        112
+      ],
+      "type": "SCALAR",
+      "bufferView": 2,
+      "byteOffset": 0
+    },
+    {
+      "name": "Mesh1 Group1 Model_1_1_indices",
+      "componentType": 5123,
+      "count": 30,
+      "min": [
+        113
+      ],
+      "max": [
+        132
+      ],
+      "type": "SCALAR",
+      "bufferView": 2,
+      "byteOffset": 360
+    }
+  ],
+  "asset": {
+    "generator": "obj2gltf",
+    "version": "2.0"
+  },
+  "buffers": [
+    {
+      "name": "roadTile_019",
+      "byteLength": 4676,
+      "uri": "data:application/octet-stream;base64,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UkOzPvxuWj5SQ7M+xebjvpsE773F5uO+q1t9PpaMaD9SQ7M+p1ovP5sE772nWi8/z3RlvJaMaD8X2TY//yQWP9UjUT8E5rk+UkOzPgTmuT6u2Oc+/yQWP1JDsz78blo+1SNRP/xuWj7VI1E/xebjvlJDsz7F5uO+UkOzPiYB6r6uEYE+wa2rv4r4mLzBrau/mwTvvSYB6r6vs6m+s7Wmv4AqGr+ztaa/QkMzv+8g1r5XBG++7yDWvlJDs76ZgZq+1nTlvorNl78DCzi/is2Xv9UjUb+ZgZq+tf7OPnlahj6hhiM/AKvLPtZ05b62oYK+v2IVv9RIE78DCzi/tqGCvor4mDyOrSc9mwTvvdv5jr6uEYG+jq0nPYAqGj8/V9u9VwTvPsHF2r6vs6k+P1fbvZsE77009MO/VmLGvswLqL+bBO+9zAuov5sE7z1WgmW+iviYPG7djb+uEYG+bt2Nv1JDs75WgmW+UkOzvvxuWj6bBO89/G5aPpsE7z3F5uO+UkOzvsXm477PdGU8b55qvZsE7z3pt4++UkOzvum3j76rW32+b55qva7Y576zeoc+UkOzvti2KD3VI1G/2LYoPRfZNr+zeoc+1SNRv/xuWj5SQ7O+/G5aPlJDs77F5uO+1SNRv8Xm4747Ae2+I/nyPhu8n74xsoM/DfywvvTDwD47Ae2+9MPAPi1B/r4xsoM/38G/vhngez/SAdG+a7upPm+DBr9ru6k+aCMPvxngez8tQf4+bAx7PzsB7T4OFKg+DfywPg4UqD4bvJ8+bAx7P9/Bvz5bSIM/aCMPP1tIgz9vgwY/lxy/PtIB0T6XHL8+G7yfvhAfID8bvJ++MLnhPi1B/r4wueE+LUH+vhAfID8AAAEAAgADAAQABQAGAAcACAAJAAoACwAMAA0ADgAMAA4ADwAMAA8AEAARABIAEwARABMAFAAVABYAFwAVABcAGAAZABoAGwAZABsAHAAdAB4AHwAdAB8AIAAhACIAIwAkACIAIQAkACUAIgAmACUAJAAlACYAJwAmACgAJwAoACYAKQAqACsALAAqACwALQAuAC8AMAAuADAAMQAyADMANAAyADQANQA2ADcAOAA2ADgAOQA6ADsAPAA6ADwAPQA+AD8AQAA+AEAAQQBCAEMARABCAEQARQBGAEcASABGAEgASQBKAEsATABKAEwATQANAE8ATgBOAA8ADgAOAA0ATgBQAFEAUgBTAFQAVQBWAFcAWABZAFoAWwBcAF0AXgBcAF4AXwBgAGEAYgBgAGIAYwBkAGUAZgBkAGYAZwBoAGkAagBoAGoAawBsAG0AbgBsAG4AbwBwACgAIwAnACgAcABwACMAIgBxAHIAcwBxAHMAdAB1AHYAdwB1AHcAeAB5AHoAewB5AHsAfAB9AH4AfwB9AH8AgACBAIIAgwCBAIMAhAA="
+    }
+  ],
+  "bufferViews": [
+    {
+      "name": "bufferView_0",
+      "buffer": 0,
+      "byteLength": 3192,
+      "byteOffset": 0,
+      "byteStride": 12,
+      "target": 34962
+    },
+    {
+      "name": "bufferView_1",
+      "buffer": 0,
+      "byteLength": 1064,
+      "byteOffset": 3192,
+      "byteStride": 8,
+      "target": 34962
+    },
+    {
+      "name": "bufferView_2",
+      "buffer": 0,
+      "byteLength": 420,
+      "byteOffset": 4256,
+      "target": 34963
+    }
+  ],
+  "materials": [
+    {
+      "name": "Grass",
+      "pbrMetallicRoughness": {
+        "baseColorFactor": [
+          0.541176,
+          0.709804,
+          0.286275,
+          1
+        ],
+        "metallicFactor": 0,
+        "roughnessFactor": 1
+      },
+      "emissiveFactor": [
+        0,
+        0,
+        0
+      ],
+      "alphaMode": "OPAQUE",
+      "doubleSided": false
+    },
+    {
+      "name": "Alternate_Dirt",
+      "pbrMetallicRoughness": {
+        "baseColorFactor": [
+          0.721569,
+          0.564706,
+          0.396078,
+          1
+        ],
+        "metallicFactor": 0,
+        "roughnessFactor": 1
+      },
+      "emissiveFactor": [
+        0,
+        0,
+        0
+      ],
+      "alphaMode": "OPAQUE",
+      "doubleSided": false
+    }
+  ],
+  "meshes": [
+    {
+      "name": "Mesh1 Group1 Model_1",
+      "primitives": [
+        {
+          "attributes": {
+            "POSITION": 0,
+            "NORMAL": 1,
+            "TEXCOORD_0": 2
+          },
+          "indices": 3,
+          "material": 0,
+          "mode": 4
+        },
+        {
+          "attributes": {
+            "POSITION": 0,
+            "NORMAL": 1,
+            "TEXCOORD_0": 2
+          },
+          "indices": 4,
+          "material": 1,
+          "mode": 4
+        }
+      ]
+    }
+  ],
+  "nodes": [
+    {
+      "name": "Mesh1 Group1 Model",
+      "mesh": 0
+    }
+  ],
+  "scene": 0,
+  "scenes": [
+    {
+      "nodes": [
+        0
+      ]
+    }
+  ]
+}
+`,
+  hillB: `{
+  "accessors": [
+    {
+      "name": "Mesh1 Group1 Model_1_positions",
+      "componentType": 5126,
+      "count": 113,
+      "min": [
+        0,
+        0,
+        -1.490779995918274
+      ],
+      "max": [
+        1.7214000225067139,
+        2.622879981994629,
+        0
+      ],
+      "type": "VEC3",
+      "bufferView": 0,
+      "byteOffset": 0
+    },
+    {
+      "name": "Mesh1 Group1 Model_1_normals",
+      "componentType": 5126,
+      "count": 113,
+      "min": [
+        -0.9946939945220947,
+        -1,
+        -0.9946939945220947
+      ],
+      "max": [
+        0.9946939945220947,
+        1,
+        0.9946939945220947
+      ],
+      "type": "VEC3",
+      "bufferView": 0,
+      "byteOffset": 1356
+    },
+    {
+      "name": "Mesh1 Group1 Model_1_texcoords",
+      "componentType": 5126,
+      "count": 113,
+      "min": [
+        -1.5320500135421753,
+        -1.622879981994629
+      ],
+      "max": [
+        1.738610029220581,
+        1.104688048362732
+      ],
+      "type": "VEC2",
+      "bufferView": 1,
+      "byteOffset": 0
+    },
+    {
+      "name": "Mesh1 Group1 Model_1_0_indices",
+      "componentType": 5123,
+      "count": 30,
+      "min": [
+        0
+      ],
+      "max": [
+        112
+      ],
+      "type": "SCALAR",
+      "bufferView": 2,
+      "byteOffset": 0
+    },
+    {
+      "name": "Mesh1 Group1 Model_1_1_indices",
+      "componentType": 5123,
+      "count": 150,
+      "min": [
+        16
+      ],
+      "max": [
+        108
+      ],
+      "type": "SCALAR",
+      "bufferView": 2,
+      "byteOffset": 60
+    }
+  ],
+  "asset": {
+    "generator": "obj2gltf",
+    "version": "2.0"
+  },
+  "buffers": [
+    {
+      "name": "roadTile_020",
+      "byteLength": 3976,
+      "uri": "data:application/octet-stream;base64,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oHOMo6ew0j1EpH6/X0GCP32AcD8K2XU/RfTDPqLUQj9F9MM+Hys0P32AcD8JphY/a2aNP3b9Zj9rZo0/9FNYP4RGDD+cTyU/hEYMPx8rNL/us9I+Hys0v1EUyD1fQYK/URTIPV9Bgr/us9I+CaYWvw13bT+cTyW/XeG9PvRTWL9d4b0+dv1mvw13bT+i1EK/yGC1PitoBr8UBVY/otRCvzKwHj6nIpm/FAVWPwrZdb/IYLU+Ctl1P8hgtT4K2XU/MrAePqLUQj8ysB4+otRCP8hgtT4K2XW/MrAePqcimb8FUae+K2gGvwVRp74E5kG+gVyCPmAEDb8qOzk/qMf2PSo7OT/WVlw+l/2qPiBBJb+X/ao+1lbcPiFYNT4raAY/ZhIRP6cimT9mEhE/IEGlPyFYNT4lzMA/QUiWviBBJT9BSJa+4X09P1nAxD2srbQ/WcDEPSBBJT/mHoI+JczAP+Yegj5xILQ/iQeAv/KXPj+JB4C/1lZcvrtHtj4gQSU/u0e2PmDqCz9E+mW/pfftvUT6Zb8gQSU/DHYbv9ZWXL4Mdhu/qMf2veLkXr5gBA0/4uRevjcaxL+BXII+IEGlv9Sa5r6nIpm/bAl5vStoBr9sCXm91lbcvtSa5r6srbS/JNPRPuF9Pb8k09E+IEElv4OmpTwlzMC/g6alPPKXPr+dEY2/cSC0v50Rjb8lzMC/4esbPiBBJb/h6xs+8pc+vx8uWb5wtom/NbV0v3EgtL8fLlm+pfftPd+JSb/WVly+xvnDv2DqC7/fiUm/cLaJP4i6z7+QhtM+/iuTv3C2iT/+K5O/wJWYP7/U/77WVlw/Wiqfvz2CBz+/1P++cSC0P0fmuT5wtok/u+3CvvKXPj9H5rk+YOoLP7YxcD/WVlw+vB9HPqX37b22MXA/xoreP/4rk79wtok/iLrPv3C2iT/+K5O/1lZcv/G6vr3AlZi/cZImPz2CB79xkiY/SrZKPoFcgj49ggc/kxxUP9ZWXD+BXII+wJWYP4iAo749ggc/iICjvqX37T0EHJq/YOoLvwQcmr8gQSW/12dOPdZWXD7XZ049IEGlP5SFzz3AlZg/0ZaTvz2CBz/RlpO/1lbcPpSFzz0VAMM/gVyCPsCVmD+THFQ/1lbcvlEznD49gge/qwRzv8CVmL+rBHO/IEGlv1EznD4fKzS/tOGLP6LUQr8QPQk/Ctl1vxA9CT9fQYK/tOGLPwAAAQACAAAAAgADAAQABQAGAAQABgAHAAgACQAKAAgACgALAAwADQAOAAwADgAPAG0AbgBvAG0AbwBwABAAEQASABEAEAATABMAEAAUABUAFgAXABUAFwAYABkAGgAUABIAGgAZABIAGwAaABEAGwASABsAEQAcAB0AHgAfAB0AHwAgACEAIgAjACEAIwAkACUAJgAnACUAJwAoACkAKgArACkAKwAsAC0ALgAvAC0ALwAwADEAMgAzADEAMwA0ABMAGgA1ABMAFAAaADYANwA4ADYAOAA5ADoAOwA8ADoAPAA9AD4APwBAAD4AQABBAEIAQwBEAEUARgBHAEgASQBKAEsATABNAE4ATwBQAFEAUgBTAFQAVQBWAFcAWABZAFoAWwBcAFoAXABdAFoAXQBeAF8AYABhAF8AYQBiAGMAZABlAGMAZQBmAFsAaABnAGcAXQBcAFwAWwBnAGkAagBrAGkAawBsAA=="
+    }
+  ],
+  "bufferViews": [
+    {
+      "name": "bufferView_0",
+      "buffer": 0,
+      "byteLength": 2712,
+      "byteOffset": 0,
+      "byteStride": 12,
+      "target": 34962
+    },
+    {
+      "name": "bufferView_1",
+      "buffer": 0,
+      "byteLength": 904,
+      "byteOffset": 2712,
+      "byteStride": 8,
+      "target": 34962
+    },
+    {
+      "name": "bufferView_2",
+      "buffer": 0,
+      "byteLength": 360,
+      "byteOffset": 3616,
+      "target": 34963
+    }
+  ],
+  "materials": [
+    {
+      "name": "Alternate_Dirt",
+      "pbrMetallicRoughness": {
+        "baseColorFactor": [
+          0.721569,
+          0.564706,
+          0.396078,
+          1
+        ],
+        "metallicFactor": 0,
+        "roughnessFactor": 1
+      },
+      "emissiveFactor": [
+        0,
+        0,
+        0
+      ],
+      "alphaMode": "OPAQUE",
+      "doubleSided": false
+    },
+    {
+      "name": "Grass",
+      "pbrMetallicRoughness": {
+        "baseColorFactor": [
+          0.541176,
+          0.709804,
+          0.286275,
+          1
+        ],
+        "metallicFactor": 0,
+        "roughnessFactor": 1
+      },
+      "emissiveFactor": [
+        0,
+        0,
+        0
+      ],
+      "alphaMode": "OPAQUE",
+      "doubleSided": false
+    }
+  ],
+  "meshes": [
+    {
+      "name": "Mesh1 Group1 Model_1",
+      "primitives": [
+        {
+          "attributes": {
+            "POSITION": 0,
+            "NORMAL": 1,
+            "TEXCOORD_0": 2
+          },
+          "indices": 3,
+          "material": 0,
+          "mode": 4
+        },
+        {
+          "attributes": {
+            "POSITION": 0,
+            "NORMAL": 1,
+            "TEXCOORD_0": 2
+          },
+          "indices": 4,
+          "material": 1,
+          "mode": 4
+        }
+      ]
+    }
+  ],
+  "nodes": [
+    {
+      "name": "Mesh1 Group1 Model",
+      "mesh": 0
+    }
+  ],
+  "scene": 0,
+  "scenes": [
+    {
+      "nodes": [
+        0
+      ]
+    }
+  ]
+}
+`,
+};
+
+    const frame = document.getElementById("frame");
+    const gameEl = document.getElementById("game");
     const scoreEl = document.getElementById("score");
     const energyEl = document.getElementById("energy");
+    const overlay = document.getElementById("overlay");
+    const healthFill = document.getElementById("healthFill");
 
-    const lanes = [150, 300, 450];
     const state = {
       mode: "start",
-      score: 0,
       time: 0,
-      laneIndex: 1,
-      laneTarget: 1,
-      laneShift: 0,
-      playerY: 680,
-      speed: 260,
-      spawnTimer: 0,
-      entities: [],
+      distance: 0,
+      totalDistance: Infinity,
+      playerX: 0,
+      targetX: 0,
+      steerVel: 0,
+      speed: 18,
       charge: 0,
       overcharge: 0,
       energyFrame: 0,
       energyTimer: 0,
-      inputLocked: false
+      shootCooldown: 0,
+      ammo: 18,
+      maxAmmo: 18,
+      health: 100,
+      maxHealth: 120,
+      damageCooldown: 0,
+      shieldTime: 0,
+      shieldHits: 0,
+      enemies: [],
+      bullets: [],
+      enemyBullets: [],
+      powerups: [],
+      props: [],
+      isMuted: false,
+      lastEnemySeenTime: 0,
+      enemySpawnZ: -30
     };
 
-    const images = new Map();
-    function loadImage(url) {
-      if (!url) return null;
-      if (images.has(url)) return images.get(url);
-      const img = new Image();
-      img.src = url;
-      images.set(url, img);
-      return img;
+    let scene, camera, renderer;
+    let roadMesh, groundMesh;
+    const roadSegments = [];
+    let roadSegmentLength = 7;
+    let kenneyScale = 1;
+    let roadLead = 0;
+    const hillSegments = [];
+    const grassChunks = [];
+    let grassSegmentLength = 7;
+    let grassSegmentCount = 0;
+    let playerSprite;
+    let bulletGeom, bulletMat, bulletMatCharged;
+    let enemyBulletGeom, enemyBulletMat;
+    let powerupGeom, powerupMat;
+    let shieldMesh;
+    let skyDome, sunMesh;
+    const farBuildings = [];
+    const mountainPlanes = [];
+    let textures = {};
+    const kenneyTiles = {};
+    let audio = null;
+
+    const roadWidth = 6.5;
+    let roadVisualWidth = roadWidth;
+    let surfaceY = 0.8;
+    const roadLength = 200;
+    const playerZ = 0;
+
+    function createRoadTexture() {
+      const canvas = document.createElement("canvas");
+      canvas.width = 512;
+      canvas.height = 512;
+      const ctx = canvas.getContext("2d");
+      ctx.clearRect(0, 0, 512, 512);
+
+      // lane dashes
+      ctx.strokeStyle = "rgba(255,255,255,0.75)";
+      ctx.lineWidth = 12;
+      ctx.setLineDash([40, 40]);
+      ctx.beginPath();
+      ctx.moveTo(256, 0);
+      ctx.lineTo(256, 512);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // subtle edge lines
+      ctx.strokeStyle = "rgba(255,255,255,0.55)";
+      ctx.lineWidth = 8;
+      ctx.beginPath();
+      ctx.moveTo(60, 0);
+      ctx.lineTo(60, 512);
+      ctx.moveTo(452, 0);
+      ctx.lineTo(452, 512);
+      ctx.stroke();
+
+      const tex = new THREE.CanvasTexture(canvas);
+      tex.wrapS = THREE.RepeatWrapping;
+      tex.wrapT = THREE.RepeatWrapping;
+      tex.repeat.set(1, 16);
+      tex.colorSpace = THREE.SRGBColorSpace;
+      return tex;
     }
 
-    function preload() {
-      ASSETS.scooter.rearIdle.forEach(loadImage);
-      ASSETS.scooter.rearFast.forEach(loadImage);
-      loadImage(ASSETS.scooter.rearLeft);
-      loadImage(ASSETS.scooter.rearRight);
-      loadImage(ASSETS.scooter.rearStop);
-      ASSETS.enemies.forEach(loadImage);
-      ASSETS.energy.normal.forEach(loadImage);
-      ASSETS.energy.over.forEach(loadImage);
+    function createGroundTexture() {
+      const canvas = document.createElement("canvas");
+      canvas.width = 256;
+      canvas.height = 256;
+      const ctx = canvas.getContext("2d");
+      ctx.fillStyle = "#3f7f4f";
+      ctx.fillRect(0, 0, 256, 256);
+      ctx.fillStyle = "rgba(90,150,100,0.65)";
+      for (let i = 0; i < 1000; i++) {
+        ctx.fillRect(Math.random() * 256, Math.random() * 256, 2, 2);
+      }
+      const tex = new THREE.CanvasTexture(canvas);
+      tex.wrapS = THREE.RepeatWrapping;
+      tex.wrapT = THREE.RepeatWrapping;
+      tex.repeat.set(8, 40);
+      tex.colorSpace = THREE.SRGBColorSpace;
+      return tex;
+    }
+
+    function createSkyTexture() {
+      const canvas = document.createElement("canvas");
+      canvas.width = 512;
+      canvas.height = 512;
+      const ctx = canvas.getContext("2d");
+      const grad = ctx.createLinearGradient(0, 0, 0, 512);
+      grad.addColorStop(0, "#8fd3ff");
+      grad.addColorStop(0.4, "#bfe6ff");
+      grad.addColorStop(1, "#eaf7ff");
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, 512, 512);
+      return new THREE.CanvasTexture(canvas);
+    }
+
+    function createMountainTexture() {
+      const canvas = document.createElement("canvas");
+      canvas.width = 512;
+      canvas.height = 256;
+      const ctx = canvas.getContext("2d");
+      ctx.fillStyle = "rgba(0,0,0,0)";
+      ctx.fillRect(0, 0, 512, 256);
+      ctx.fillStyle = "rgba(120,150,180,0.6)";
+      ctx.beginPath();
+      ctx.moveTo(0, 200);
+      ctx.lineTo(80, 130);
+      ctx.lineTo(170, 180);
+      ctx.lineTo(260, 120);
+      ctx.lineTo(360, 190);
+      ctx.lineTo(450, 140);
+      ctx.lineTo(512, 200);
+      ctx.lineTo(512, 256);
+      ctx.lineTo(0, 256);
+      ctx.closePath();
+      ctx.fill();
+      return new THREE.CanvasTexture(canvas);
+    }
+
+    function createSolidTexture(color) {
+      const canvas = document.createElement("canvas");
+      canvas.width = 2;
+      canvas.height = 2;
+      const ctx = canvas.getContext("2d");
+      ctx.fillStyle = color;
+      ctx.fillRect(0, 0, 2, 2);
+      const tex = new THREE.CanvasTexture(canvas);
+      tex.colorSpace = THREE.SRGBColorSpace;
+      return tex;
+    }
+
+    function loadTexture(url, fallbackColor = "#ffffff") {
+      return new Promise((resolve) => {
+        const loader = new THREE.TextureLoader();
+        let done = false;
+        const fallback = createSolidTexture(fallbackColor);
+        const finish = (tex) => {
+          if (done) return;
+          done = true;
+          resolve(tex || fallback);
+        };
+        const timeout = setTimeout(() => finish(fallback), 5000);
+        loader.load(
+          url,
+          (tex) => {
+            clearTimeout(timeout);
+            tex.colorSpace = THREE.SRGBColorSpace;
+            finish(tex);
+          },
+          undefined,
+          () => {
+            clearTimeout(timeout);
+            finish(fallback);
+          }
+        );
+      });
+    }
+
+    async function loadTextures() {
+      const idle = await Promise.all(ASSETS.scooter.rearIdle.map((u) => loadTexture(u, "#ffffff")));
+      const fast = await Promise.all(ASSETS.scooter.rearFast.map((u) => loadTexture(u, "#ffffff")));
+      const left = await loadTexture(ASSETS.scooter.rearLeft, "#ffffff");
+      const right = await loadTexture(ASSETS.scooter.rearRight, "#ffffff");
+      const stop = await loadTexture(ASSETS.scooter.rearStop, "#ffffff");
+      const enemies = await Promise.all(ASSETS.enemies.map((u) => loadTexture(u, "#ffcc88")));
+      textures = { idle, fast, left, right, stop, enemies };
+    }
+
+    function decodeDataUri(uri) {
+      const base64 = uri.split(",")[1];
+      const binary = atob(base64);
+      const len = binary.length;
+      const bytes = new Uint8Array(len);
+      for (let i = 0; i < len; i++) bytes[i] = binary.charCodeAt(i);
+      return bytes.buffer;
+    }
+
+    function readAccessor(gltf, buffers, accessorIndex) {
+      const accessor = gltf.accessors[accessorIndex];
+      const view = gltf.bufferViews[accessor.bufferView];
+      const buffer = buffers[view.buffer];
+      const byteOffset = (view.byteOffset || 0) + (accessor.byteOffset || 0);
+      const typeSize = { SCALAR: 1, VEC2: 2, VEC3: 3, VEC4: 4 }[accessor.type] || 1;
+      const componentMap = {
+        5120: Int8Array,
+        5121: Uint8Array,
+        5122: Int16Array,
+        5123: Uint16Array,
+        5125: Uint32Array,
+        5126: Float32Array
+      };
+      const ArrayType = componentMap[accessor.componentType] || Float32Array;
+      const length = accessor.count * typeSize;
+      const array = new ArrayType(buffer, byteOffset, length);
+      return { accessor, array, itemSize: typeSize };
+    }
+
+    function parseKenneyGltf(text) {
+      const gltf = JSON.parse(text);
+      const buffers = gltf.buffers.map((buf) => {
+        if (buf.uri?.startsWith("data:")) return decodeDataUri(buf.uri);
+        throw new Error("External buffers not supported in Kenney glTF.");
+      });
+
+      const materials = (gltf.materials || []).map((mat) => {
+        const color = mat?.pbrMetallicRoughness?.baseColorFactor || [1, 1, 1, 1];
+        const material = new THREE.MeshStandardMaterial({
+          color: new THREE.Color(color[0], color[1], color[2]),
+          roughness: mat?.pbrMetallicRoughness?.roughnessFactor ?? 1,
+          metalness: mat?.pbrMetallicRoughness?.metallicFactor ?? 0,
+          transparent: color[3] < 0.99,
+          opacity: color[3] ?? 1
+        });
+        return material;
+      });
+
+      const meshes = (gltf.meshes || []).map((mesh) => {
+        const group = new THREE.Group();
+        mesh.primitives.forEach((prim) => {
+          const geom = new THREE.BufferGeometry();
+          if (prim.attributes.POSITION != null) {
+            const pos = readAccessor(gltf, buffers, prim.attributes.POSITION);
+            geom.setAttribute("position", new THREE.BufferAttribute(pos.array, pos.itemSize));
+          }
+          if (prim.attributes.NORMAL != null) {
+            const norm = readAccessor(gltf, buffers, prim.attributes.NORMAL);
+            geom.setAttribute("normal", new THREE.BufferAttribute(norm.array, norm.itemSize));
+          }
+          if (prim.attributes.TEXCOORD_0 != null) {
+            const uv = readAccessor(gltf, buffers, prim.attributes.TEXCOORD_0);
+            geom.setAttribute("uv", new THREE.BufferAttribute(uv.array, uv.itemSize));
+          }
+          if (prim.indices != null) {
+            const idx = readAccessor(gltf, buffers, prim.indices);
+            geom.setIndex(new THREE.BufferAttribute(idx.array, 1));
+          }
+          geom.computeBoundingSphere();
+          const mat = materials[prim.material ?? 0] || new THREE.MeshStandardMaterial({ color: 0xffffff });
+          const meshObj = new THREE.Mesh(geom, mat);
+          group.add(meshObj);
+        });
+        return group;
+      });
+
+      function buildNode(nodeIndex) {
+        const node = gltf.nodes[nodeIndex];
+        const container = new THREE.Group();
+        if (node.translation) container.position.fromArray(node.translation);
+        if (node.rotation) container.quaternion.fromArray(node.rotation);
+        if (node.scale) container.scale.fromArray(node.scale);
+        if (node.mesh != null) {
+          const mesh = meshes[node.mesh];
+          if (mesh) container.add(mesh.clone(true));
+        }
+        if (node.children) {
+          node.children.forEach((child) => container.add(buildNode(child)));
+        }
+        return container;
+      }
+
+      const scene = gltf.scenes?.[gltf.scene ?? 0];
+      const root = new THREE.Group();
+      if (scene?.nodes?.length) {
+        scene.nodes.forEach((nodeIndex) => root.add(buildNode(nodeIndex)));
+      } else if (meshes[0]) {
+        root.add(meshes[0]);
+      }
+      return root;
+    }
+
+    function prepareKenneyTile(tile) {
+      tile.updateMatrixWorld(true);
+      const bbox = new THREE.Box3().setFromObject(tile);
+      const center = new THREE.Vector3();
+      const size = new THREE.Vector3();
+      bbox.getCenter(center);
+      bbox.getSize(size);
+      const offset = center.clone().multiplyScalar(-1);
+      return { tile, size, offset };
+    }
+
+    function loadKenneyTile(key) {
+      return new Promise((resolve, reject) => {
+        try {
+          const data = KENNEY_GLTFS[key];
+          if (!data) throw new Error(`Missing Kenney tile ${key}`);
+          const root = parseKenneyGltf(data);
+          root.traverse((obj) => {
+            if (obj.isMesh) {
+              obj.material = obj.material.clone();
+              obj.material.color.multiplyScalar(1.05);
+            }
+          });
+          resolve(root);
+        } catch (err) {
+          reject(err);
+        }
+      });
+    }
+
+    async function loadKenneyTiles() {
+      const [road, grass, hillA, hillB] = await Promise.all([
+        loadKenneyTile("road"),
+        loadKenneyTile("grass"),
+        loadKenneyTile("hillA"),
+        loadKenneyTile("hillB")
+      ]);
+      kenneyTiles.road = prepareKenneyTile(road);
+      kenneyTiles.grass = prepareKenneyTile(grass);
+      kenneyTiles.hills = [prepareKenneyTile(hillA), prepareKenneyTile(hillB)];
+      buildKenneyRoad();
+      buildKenneyGrass();
+      buildKenneyHills();
+      if (roadMesh) roadMesh.visible = false;
+      if (groundMesh) groundMesh.visible = false;
+      if (playerSprite) playerSprite.position.y = surfaceY + 0.2;
+    }
+
+    function buildKenneyRoad() {
+      if (!kenneyTiles.road) return;
+      const { tile, size, offset } = kenneyTiles.road;
+      roadVisualWidth = roadWidth + 0.9;
+      const scale = roadVisualWidth / size.x;
+      kenneyScale = scale;
+      surfaceY = size.y * scale * 0.5 + 0.1;
+      roadSegmentLength = size.z * scale;
+      roadLead = Math.max(roadSegmentLength * 2.5, (camera?.position?.z || 10) + roadSegmentLength);
+      const count = Math.ceil((roadLength + roadLead) / roadSegmentLength) + 6;
+      for (let i = 0; i < count; i++) {
+        const seg = tile.clone(true);
+        seg.scale.setScalar(scale);
+        seg.position.set(offset.x * scale, offset.y * scale + 0.02, offset.z * scale + roadLead - i * roadSegmentLength);
+        scene.add(seg);
+        roadSegments.push(seg);
+      }
+    }
+
+    function buildKenneyGrass() {
+      if (!kenneyTiles.grass) return;
+      const { tile, size, offset } = kenneyTiles.grass;
+      const scale = kenneyScale;
+      grassSegmentLength = size.z * scale;
+      grassSegmentCount = Math.ceil((roadLength + roadLead) / grassSegmentLength) + 6;
+      const tileWidth = size.x * scale;
+      const roadHalf = roadVisualWidth / 2;
+      for (let i = 0; i < grassSegmentCount; i++) {
+        for (const side of [-1, 1]) {
+          const chunk = tile.clone(true);
+          chunk.scale.setScalar(scale);
+          chunk.position.set(
+            side * (roadHalf + tileWidth / 2 - 0.2) + offset.x * scale,
+            offset.y * scale,
+            offset.z * scale + roadLead - i * grassSegmentLength
+          );
+          scene.add(chunk);
+          grassChunks.push(chunk);
+        }
+      }
+    }
+
+    function buildKenneyHills() {
+      if (!kenneyTiles.hills?.length) return;
+      for (let i = 0; i < 10; i++) {
+        const source = kenneyTiles.hills[i % kenneyTiles.hills.length];
+        const hill = source.tile.clone(true);
+        const scale = 6 + Math.random() * 4;
+        hill.scale.setScalar(scale);
+        const side = Math.random() < 0.5 ? -1 : 1;
+        hill.position.set(
+          side * (roadWidth / 2 + 12 + Math.random() * 10) + source.offset.x * scale,
+          source.offset.y * scale - 0.05,
+          source.offset.z * scale - 60 - Math.random() * 180
+        );
+        scene.add(hill);
+        hillSegments.push({ mesh: hill, speed: 0.12 + Math.random() * 0.12 });
+      }
+    }
+
+    function initScene() {
+      scene = new THREE.Scene();
+      scene.background = new THREE.Color(0x8fd3ff);
+      scene.fog = new THREE.Fog(0xbfe6ff, 12, 180);
+
+      camera = new THREE.PerspectiveCamera(60, 2 / 3, 0.1, 300);
+      camera.position.set(0, 5.5, 12);
+      camera.lookAt(0, 1.5, -30);
+
+      renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+      renderer.outputColorSpace = THREE.SRGBColorSpace;
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      gameEl.appendChild(renderer.domElement);
+
+      const ambient = new THREE.AmbientLight(0xffffff, 1.0);
+      scene.add(ambient);
+      const dir = new THREE.DirectionalLight(0xffffff, 0.9);
+      dir.position.set(8, 12, 6);
+      scene.add(dir);
+
+      // sky dome + stars
+      const skyTex = createSkyTexture();
+      skyDome = new THREE.Mesh(
+        new THREE.SphereGeometry(160, 32, 16),
+        new THREE.MeshBasicMaterial({ map: skyTex, side: THREE.BackSide })
+      );
+      scene.add(skyDome);
+
+      // sun
+      sunMesh = new THREE.Mesh(
+        new THREE.SphereGeometry(6, 24, 16),
+        new THREE.MeshBasicMaterial({ color: 0xfff2b3 })
+      );
+      sunMesh.position.set(30, 25, -120);
+      scene.add(sunMesh);
+
+      const groundTex = createGroundTexture();
+      const groundMat = new THREE.MeshLambertMaterial({ map: groundTex });
+      const groundGeo = new THREE.PlaneGeometry(40, roadLength);
+      groundMesh = new THREE.Mesh(groundGeo, groundMat);
+      groundMesh.rotation.x = -Math.PI / 2;
+      groundMesh.position.z = -roadLength / 2 + 10;
+      scene.add(groundMesh);
+
+      const roadTex = createRoadTexture();
+      const roadMat = new THREE.MeshLambertMaterial({ map: roadTex, transparent: true, opacity: 0.95, depthWrite: false });
+      const roadGeo = new THREE.PlaneGeometry(roadWidth, roadLength);
+      roadMesh = new THREE.Mesh(roadGeo, roadMat);
+      roadMesh.rotation.x = -Math.PI / 2;
+      roadMesh.position.y = 0.08;
+      roadMesh.position.z = -roadLength / 2 + 10;
+      scene.add(roadMesh);
+
+      loadKenneyTiles().catch((err) => console.warn("Kenney tiles failed", err));
+
+      // distant mountains
+      const mountainTex = createMountainTexture();
+      mountainTex.wrapS = THREE.RepeatWrapping;
+      mountainTex.wrapT = THREE.ClampToEdgeWrapping;
+      mountainTex.repeat.set(2, 1);
+      for (let i = 0; i < 2; i++) {
+        const mat = new THREE.MeshBasicMaterial({ map: mountainTex, transparent: true, opacity: 0.55, depthWrite: false });
+        const mesh = new THREE.Mesh(new THREE.PlaneGeometry(150, 12), mat);
+        mesh.position.set(0, 40 + i * 3.0, -260 - i * 140);
+        mesh.renderOrder = -2;
+        scene.add(mesh);
+        mountainPlanes.push(mesh);
+      }
+
+      // distant skyline blocks (light misty)
+      for (let i = 0; i < 26; i++) {
+        const w = 1 + Math.random() * 2.5;
+        const h = 2 + Math.random() * 5.5;
+        const d = 1 + Math.random() * 2.5;
+        const mat = new THREE.MeshStandardMaterial({
+          color: 0x9eb8c8,
+          emissive: 0x8bb0c6,
+          emissiveIntensity: 0.4,
+          transparent: true,
+          opacity: 0.7
+        });
+        const box = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
+        const side = Math.random() < 0.5 ? -1 : 1;
+        box.position.set(side * (roadWidth / 2 + 11 + Math.random() * 12), h / 2 + 14, -160 - Math.random() * 220);
+        box.renderOrder = -1;
+        scene.add(box);
+        farBuildings.push(box);
+      }
+
+      playerSprite = makeSprite(textures.idle[0]);
+      playerSprite.position.set(0, surfaceY + 0.2, playerZ);
+      playerSprite.scale.set(2.7, 2.7, 1);
+      scene.add(playerSprite);
+
+      bulletGeom = new THREE.SphereGeometry(0.12, 8, 8);
+      bulletMat = new THREE.MeshBasicMaterial({ color: 0xfff27a });
+      bulletMatCharged = new THREE.MeshBasicMaterial({ color: 0x66f2ff });
+      enemyBulletGeom = new THREE.SphereGeometry(0.1, 8, 8);
+      enemyBulletMat = new THREE.MeshBasicMaterial({ color: 0xff6b6b });
+      powerupGeom = new THREE.OctahedronGeometry(0.45, 0);
+      powerupMat = new THREE.MeshStandardMaterial({ color: 0x66f2ff, emissive: 0x66f2ff, emissiveIntensity: 0.6 });
+
+      shieldMesh = new THREE.Mesh(
+        new THREE.TorusGeometry(1.1, 0.08, 8, 20),
+        new THREE.MeshBasicMaterial({ color: 0x66f2ff, transparent: true, opacity: 0.55 })
+      );
+      shieldMesh.rotation.x = Math.PI / 2;
+      shieldMesh.visible = false;
+      scene.add(shieldMesh);
+
+      // roadside props
+      for (let i = 0; i < 64; i++) {
+        const prop = makeProp();
+        prop.position.set((Math.random() < 0.5 ? -1 : 1) * (roadVisualWidth / 2 + 1.4 + Math.random() * 2.2), 0.5, -10 - Math.random() * 140);
+        scene.add(prop);
+        state.props.push(prop);
+      }
+
+      resizeRenderer();
+      setupInput();
+      updateHealthBar();
+      requestAnimationFrame(loop);
+    }
+
+    function makeSprite(tex) {
+      const mat = new THREE.SpriteMaterial({ map: tex, transparent: true });
+      mat.depthTest = false;
+      mat.depthWrite = false;
+      return new THREE.Sprite(mat);
+    }
+
+    function initAudio() {
+      if (audio) return;
+      audio = {
+        bgm: new Audio(ASSETS.audio.bgm),
+        engine: new Audio(ASSETS.audio.engine),
+        shoot: new Audio(ASSETS.audio.shoot),
+        hit: new Audio(ASSETS.audio.hit),
+        overcharge: new Audio(ASSETS.audio.overcharge),
+        pickup: new Audio(ASSETS.audio.pickup),
+        crash: new Audio(ASSETS.audio.crash)
+      };
+      audio.bgm.loop = true;
+      audio.bgm.volume = 0.25;
+      audio.engine.loop = true;
+      audio.engine.volume = 0.35;
+      audio.shoot.volume = 0.35;
+      audio.hit.volume = 0.45;
+      audio.overcharge.volume = 0.5;
+      audio.pickup.volume = 0.45;
+      audio.crash.volume = 0.6;
+      applyMuted();
+    }
+
+    function applyMuted() {
+      if (!audio) return;
+      Object.values(audio).forEach((snd) => {
+        snd.muted = state.isMuted;
+      });
+    }
+
+    function playSound(name) {
+      if (!audio || state.isMuted) return;
+      const snd = audio[name];
+      if (!snd) return;
+      try {
+        snd.currentTime = 0;
+        snd.play();
+      } catch (err) {
+        // ignore autoplay errors
+      }
+    }
+
+    function updateHealthBar() {
+      if (!healthFill) return;
+      const pct = Math.max(0, Math.min(1, state.health / state.maxHealth));
+      healthFill.style.width = `${pct * 100}%`;
+    }
+
+    function makeTree() {
+      const group = new THREE.Group();
+      const trunk = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.12, 0.18, 1.1, 8),
+        new THREE.MeshStandardMaterial({ color: 0x7b5a3c })
+      );
+      trunk.position.y = 0.55;
+      const crown = new THREE.Mesh(
+        new THREE.ConeGeometry(0.8, 1.8, 10),
+        new THREE.MeshStandardMaterial({ color: 0x3e9b52 })
+      );
+      crown.position.y = 1.7;
+      group.add(trunk, crown);
+      return group;
+    }
+
+    function makeBush() {
+      const bush = new THREE.Mesh(
+        new THREE.SphereGeometry(0.55, 10, 8),
+        new THREE.MeshStandardMaterial({ color: 0x4fae62 })
+      );
+      bush.position.y = 0.4;
+      return bush;
+    }
+
+    function makeProp() {
+      const roll = Math.random();
+      if (roll < 0.65) return makeTree();
+      if (roll < 0.85) return makeBush();
+      const group = new THREE.Group();
+      const pole = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.05, 0.05, 1.2, 8),
+        new THREE.MeshStandardMaterial({ color: 0xb0c7d6 })
+      );
+      pole.position.y = 0.6;
+      const sign = new THREE.Mesh(
+        new THREE.BoxGeometry(0.8, 0.4, 0.1),
+        new THREE.MeshStandardMaterial({ color: Math.random() < 0.5 ? 0x56dcff : 0xffb347 })
+      );
+      sign.position.y = 1.1;
+      group.add(pole, sign);
+      return group;
+    }
+
+    function laneX() {
+      const lanes = [-0.45, -0.2, 0, 0.2, 0.45];
+      return lanes[Math.floor(Math.random() * lanes.length)] * roadWidth;
+    }
+
+    function createEnemy() {
+      const tex = textures.enemies[Math.floor(Math.random() * textures.enemies.length)];
+      const enemy = makeSprite(tex);
+      enemy.scale.set(2.6, 2.6, 1);
+      scene.add(enemy);
+      return { sprite: enemy, shootTimer: 0, pattern: "aim" };
+    }
+
+    function pickPattern() {
+      let patterns = ["aim"];
+      if (state.time > 25) patterns = ["aim", "burst"];
+      if (state.time > 60) patterns = ["aim", "burst", "scatter"];
+      return patterns[Math.floor(Math.random() * patterns.length)];
+    }
+
+    function resetEnemy(enemy) {
+      if (state.enemySpawnZ < -240) state.enemySpawnZ = -60;
+      enemy.sprite.position.set(laneX(), surfaceY + 0.2, state.enemySpawnZ + (Math.random() * 6 - 3));
+      state.enemySpawnZ -= 15;
+      enemy.pattern = pickPattern();
+      const baseDelay = state.time < 20 ? 1.3 : state.time < 50 ? 1.1 : 0.9;
+      enemy.shootTimer = baseDelay + Math.random() * 0.6;
+    }
+
+    function spawnBullet(charged) {
+      const bullet = new THREE.Mesh(bulletGeom, charged ? bulletMatCharged : bulletMat);
+      bullet.position.set(state.playerX, surfaceY + 0.25, playerZ - 1.2);
+      bullet.scale.setScalar(charged ? 2.8 : 1.0);
+      bullet.userData = {
+        speedMult: charged ? 3.4 : 2.2,
+        pierce: charged ? 2 : 0,
+        blastRadius: charged ? 3.4 : 1.0
+      };
+      scene.add(bullet);
+      state.bullets.push(bullet);
+    }
+
+    function spawnEnemyBulletAt(enemy, vx, vz) {
+      const bullet = new THREE.Mesh(enemyBulletGeom, enemyBulletMat);
+      bullet.position.set(enemy.sprite.position.x, surfaceY + 0.25, enemy.sprite.position.z);
+      bullet.userData = { vx, vz };
+      scene.add(bullet);
+      state.enemyBullets.push(bullet);
+    }
+
+    function fireEnemy(enemy, moveSpeed) {
+      const lead = state.playerX + state.steerVel * 0.35;
+      const dx = lead - enemy.sprite.position.x;
+      const dz = playerZ - enemy.sprite.position.z;
+      const len = Math.max(0.001, Math.hypot(dx, dz));
+      const shotSpeed = Math.max(12, moveSpeed + 10);
+      const baseVx = (dx / len) * shotSpeed;
+      const baseVz = (dz / len) * shotSpeed;
+      if (enemy.pattern === "burst") {
+        spawnEnemyBulletAt(enemy, baseVx, baseVz);
+        spawnEnemyBulletAt(enemy, baseVx + 0.9, baseVz);
+        spawnEnemyBulletAt(enemy, baseVx - 0.9, baseVz);
+      } else if (enemy.pattern === "scatter") {
+        spawnEnemyBulletAt(enemy, baseVx + (Math.random() * 2 - 1) * 1.6, baseVz);
+      } else {
+        spawnEnemyBulletAt(enemy, baseVx, baseVz);
+      }
+    }
+
+    function shoot() {
+      if (state.mode !== "play") return;
+      if (state.shootCooldown > 0) return;
+      const ammoCost = state.overcharge > 0 ? 2 : 1;
+      if (state.ammo < ammoCost) return;
+      const charged = state.overcharge > 0;
+      state.shootCooldown = charged ? 0.18 : 0.25;
+      state.ammo = Math.max(0, state.ammo - ammoCost);
+      spawnBullet(charged);
+      playSound("shoot");
+      if (charged) {
+        state.overcharge = Math.max(0, state.overcharge - 0.35);
+      }
+      window.FarcadeSDK?.hapticFeedback();
+    }
+
+    function spawnPowerup() {
+      const orb = new THREE.Mesh(powerupGeom, powerupMat);
+      orb.position.set((Math.random() * 2 - 1) * (roadWidth * 0.4), surfaceY + 0.5, -50 - Math.random() * 80);
+      let type = "shield";
+      const roll = Math.random();
+      if (state.ammo <= 4 && roll < 0.6) type = "ammo";
+      else if (state.health < state.maxHealth * 0.6 && roll < 0.8) type = "health";
+      else if (roll < 0.4) type = "ammo";
+      else if (roll < 0.7) type = "health";
+      orb.userData = { type, spin: Math.random() * 2 + 0.5 };
+      scene.add(orb);
+      state.powerups.push(orb);
+    }
+
+    function setupInput() {
+      frame.addEventListener("pointerdown", (e) => {
+        if (tryStart()) return;
+        updateTargetFromPointer(e);
+        shoot();
+      });
+      frame.addEventListener("pointermove", (e) => {
+        if (state.mode !== "play" || e.buttons === 0) return;
+        updateTargetFromPointer(e);
+      });
+      window.addEventListener("keydown", (e) => {
+        if (e.key === "ArrowLeft") state.targetX -= 0.5;
+        if (e.key === "ArrowRight") state.targetX += 0.5;
+        if (e.key === " " || e.key === "Spacebar") shoot();
+        if (e.key === "f") toggleFullscreen();
+      });
+      overlay.addEventListener("pointerdown", (e) => {
+        e.preventDefault();
+        tryStart();
+      });
+      window.addEventListener("resize", resizeRenderer);
+    }
+
+    function updateTargetFromPointer(e) {
+      const rect = frame.getBoundingClientRect();
+      const x = (e.clientX - rect.left) / rect.width;
+      const norm = x * 2 - 1;
+      state.targetX = norm * (roadWidth * 0.45);
+    }
+
+    function toggleFullscreen() {
+      if (!document.fullscreenElement) {
+        frame.requestFullscreen().catch(() => {});
+      } else {
+        document.exitFullscreen().catch(() => {});
+      }
+    }
+
+    function resizeRenderer() {
+      if (!renderer) return;
+      const rect = frame.getBoundingClientRect();
+      renderer.setSize(rect.width, rect.height, false);
+      camera.aspect = rect.width / rect.height;
+      camera.updateProjectionMatrix();
+    }
+
+    function tryStart() {
+      if (state.mode !== "play") {
+        resetGame();
+        return true;
+      }
+      return false;
     }
 
     function resetGame() {
       state.mode = "play";
-      state.score = 0;
       state.time = 0;
-      state.laneIndex = 1;
-      state.laneTarget = 1;
-      state.laneShift = 0;
-      state.spawnTimer = 0;
-      state.entities = [];
+      state.distance = 0;
+      state.playerX = 0;
+      state.targetX = 0;
+      state.steerVel = 0;
       state.charge = 0;
       state.overcharge = 0;
       state.energyFrame = 0;
       state.energyTimer = 0;
-      state.inputLocked = false;
+      state.shootCooldown = 0;
+      state.ammo = state.maxAmmo;
+      state.health = state.maxHealth;
+      state.damageCooldown = 0;
+      state.shieldTime = 0;
+      state.shieldHits = 0;
+      state.lastEnemySeenTime = 0;
+      state.enemySpawnZ = -30;
+      state.enemies.forEach((e) => scene.remove(e.sprite));
+      state.enemies = [];
+      for (let i = 0; i < 14; i++) {
+        const enemy = createEnemy();
+        enemy.sprite.position.set(laneX(), surfaceY + 0.2, state.enemySpawnZ);
+        enemy.pattern = "aim";
+        enemy.shootTimer = 0.9 + Math.random() * 0.6;
+        state.enemySpawnZ -= 15;
+        state.enemies.push(enemy);
+      }
+      state.bullets.forEach((b) => scene.remove(b));
+      state.bullets = [];
+      state.enemyBullets.forEach((b) => scene.remove(b));
+      state.enemyBullets = [];
+      state.powerups.forEach((p) => scene.remove(p));
+      state.powerups = [];
+      initAudio();
+      if (audio) {
+        audio.bgm.currentTime = 0;
+        audio.bgm.play().catch(() => {});
+        audio.engine.currentTime = 0;
+        audio.engine.play().catch(() => {});
+      }
       overlay.classList.add("hidden");
+      overlay.querySelector(".title").textContent = "Overcharge Dash 3D";
+      overlay.querySelector(".subtitle").textContent = "Race forever. Overcharge unlocks mega shots. Grab shields.";
+      overlay.querySelector(".btn").textContent = "Tap to Start";
+      updateHealthBar();
     }
 
-    function gameOver() {
+    function gameOver(title, subtitle) {
       if (state.mode !== "play") return;
       state.mode = "over";
-      overlay.classList.remove("hidden");
-      overlay.querySelector(".title").textContent = "Wiped Out!";
-      overlay.querySelector(".subtitle").textContent = `Score ${state.score}`;
-      overlay.querySelector(".btn").textContent = "Tap to Retry";
-      if (window.FarcadeSDK && window.FarcadeSDK.singlePlayer) {
-        window.FarcadeSDK.singlePlayer.actions.gameOver({ score: state.score });
+      if (audio) {
+        audio.engine.pause();
+        audio.bgm.pause();
       }
+      playSound("crash");
+      overlay.classList.remove("hidden");
+      overlay.querySelector(".title").textContent = title;
+      overlay.querySelector(".subtitle").textContent = subtitle;
+      overlay.querySelector(".btn").textContent = "Race Again";
+      window.FarcadeSDK?.singlePlayer?.actions.gameOver({ score: Math.floor(state.distance) });
     }
 
-    function laneToX(idx) {
-      return lanes[Math.max(0, Math.min(lanes.length - 1, idx))];
-    }
-
-    function spawnEnemy() {
-      const lane = Math.floor(Math.random() * lanes.length);
-      const spriteUrl = ASSETS.enemies.length
-        ? ASSETS.enemies[Math.floor(Math.random() * ASSETS.enemies.length)]
-        : null;
-      state.entities.push({
-        x: laneToX(lane),
-        y: -80,
-        r: 36,
-        lane,
-        spriteUrl,
-        hit: false
-      });
+    function damagePlayer() {
+      if (state.damageCooldown > 0 || state.mode !== "play") return;
+      if (state.shieldTime > 0) {
+        state.shieldHits = Math.max(0, state.shieldHits - 1);
+        state.damageCooldown = 0.4;
+        window.FarcadeSDK?.hapticFeedback();
+        return;
+      }
+      state.health = Math.max(0, state.health - 20);
+      state.damageCooldown = 1.0;
+      updateHealthBar();
+      playSound("hit");
+      window.FarcadeSDK?.hapticFeedback();
+      if (state.health <= 0) {
+        gameOver("Wiped Out!", `Distance ${Math.floor(state.distance)}m`);
+      }
     }
 
     function update(dt) {
       if (state.mode !== "play") return;
       state.time += dt;
-      state.spawnTimer -= dt;
-      const spawnRate = state.overcharge > 0 ? 0.4 : 0.65;
-      if (state.spawnTimer <= 0) {
-        spawnEnemy();
-        state.spawnTimer = spawnRate;
-      }
+      const speedBoost = state.overcharge > 0 ? 8 : 0;
+      const moveSpeed = state.speed + speedBoost;
+      state.distance += moveSpeed * dt * 10;
 
-      // charge buildup
+      // infinite run - no finish line
+
+      const activeEnemies = Math.min(state.enemies.length, 8 + Math.floor(state.time / 30));
+      if (state.powerups.length < 1 && Math.random() < 0.004) spawnPowerup();
+
+      state.shootCooldown = Math.max(0, state.shootCooldown - dt);
+      state.damageCooldown = Math.max(0, state.damageCooldown - dt);
+      state.shieldTime = Math.max(0, state.shieldTime - dt);
+      if (state.shieldTime <= 0) state.shieldHits = 0;
+
       if (state.overcharge <= 0) {
         state.charge = Math.min(1, state.charge + dt * 0.08);
         if (state.charge >= 1) {
           state.overcharge = 3.5;
           state.charge = 0;
-          if (window.FarcadeSDK) window.FarcadeSDK.hapticFeedback();
+          playSound("overcharge");
+          window.FarcadeSDK?.hapticFeedback();
         }
       } else {
         state.overcharge -= dt;
       }
 
-      // lane shift
-      const targetX = laneToX(state.laneTarget);
-      const currentX = laneToX(state.laneIndex) + state.laneShift;
-      const diff = targetX - currentX;
-      const move = Math.sign(diff) * Math.min(Math.abs(diff), dt * 720);
-      state.laneShift += move;
-      if (Math.abs(diff) < 2) {
-        state.laneIndex = state.laneTarget;
-        state.laneShift = 0;
+      const steerDiff = state.targetX - state.playerX;
+      state.steerVel += steerDiff * dt * 6;
+      state.steerVel *= 0.85;
+      state.playerX += state.steerVel * dt * 4;
+      const clamp = roadWidth * 0.45;
+      state.playerX = Math.max(-clamp, Math.min(clamp, state.playerX));
+
+      playerSprite.position.x = state.playerX;
+      playerSprite.position.y = surfaceY + 0.2;
+      playerSprite.material.opacity = state.damageCooldown > 0 ? 0.6 : 1.0;
+      if (shieldMesh) {
+        shieldMesh.visible = state.shieldTime > 0;
+        shieldMesh.position.set(state.playerX, surfaceY + 0.25, playerZ);
+        shieldMesh.rotation.z += dt * 2;
       }
 
-      // move enemies
-      state.entities.forEach((e) => {
-        e.y += (state.speed + (state.overcharge > 0 ? 120 : 0)) * dt;
-      });
-      state.entities = state.entities.filter((e) => e.y < 980 && !e.hit);
+      // subtle camera parallax
+      camera.position.x = state.playerX * 0.08;
+      camera.lookAt(state.playerX * 0.05, 1.5, -30);
+      if (skyDome) skyDome.position.copy(camera.position);
+      if (sunMesh) sunMesh.position.x = 30 + state.playerX * 0.2;
 
-      // collisions
-      const playerX = laneToX(state.laneIndex) + state.laneShift;
-      const playerR = 38;
-      for (const e of state.entities) {
-        const dx = e.x - playerX;
-        const dy = e.y - state.playerY;
-        const dist = Math.hypot(dx, dy);
-        if (dist < playerR + e.r) {
+      // move textures to simulate speed
+      if (roadMesh?.material?.map) {
+        roadMesh.material.map.offset.y = (roadMesh.material.map.offset.y - moveSpeed * dt * 0.02) % 1;
+      }
+      if (groundMesh?.material?.map) {
+        groundMesh.material.map.offset.y = (groundMesh.material.map.offset.y - moveSpeed * dt * 0.01) % 1;
+      }
+
+      if (roadSegments.length) {
+        const wrap = roadSegmentLength * roadSegments.length;
+        roadSegments.forEach((seg) => {
+          seg.position.z += moveSpeed * dt;
+          if (seg.position.z > roadLead) {
+            seg.position.z -= wrap;
+          }
+        });
+      }
+
+      if (grassChunks.length && grassSegmentCount > 0) {
+        const wrap = grassSegmentLength * grassSegmentCount;
+        grassChunks.forEach((chunk) => {
+          chunk.position.z += moveSpeed * dt;
+          if (chunk.position.z > roadLead) {
+            chunk.position.z -= wrap;
+          }
+        });
+      }
+
+      // update bullets
+      for (let i = state.bullets.length - 1; i >= 0; i--) {
+        const bullet = state.bullets[i];
+        const speedMult = bullet.userData?.speedMult || 2.2;
+        bullet.position.z -= moveSpeed * dt * speedMult;
+        if (bullet.position.z < -140) {
+          scene.remove(bullet);
+          state.bullets.splice(i, 1);
+        }
+      }
+
+      // update enemies
+      let visibleCount = 0;
+      for (let i = state.enemies.length - 1; i >= 0; i--) {
+        const enemy = state.enemies[i];
+        if (i >= activeEnemies) {
+          enemy.sprite.visible = false;
+          enemy.sprite.position.z = -300 - i * 20;
+          continue;
+        }
+        enemy.sprite.visible = true;
+        enemy.sprite.position.z += moveSpeed * dt;
+        enemy.sprite.position.y = surfaceY + 0.2;
+        if (enemy.sprite.position.z < -8 && enemy.sprite.position.z > -150) {
+          visibleCount += 1;
+        }
+        if (enemy.sprite.position.z > 6) {
+          resetEnemy(enemy);
+          continue;
+        }
+        if (Math.abs(enemy.sprite.position.z - playerZ) < 1.4 && Math.abs(enemy.sprite.position.x - state.playerX) < 1.3) {
           if (state.overcharge > 0) {
-            e.hit = true;
-            state.score += 5;
-            if (window.FarcadeSDK) window.FarcadeSDK.hapticFeedback();
+            scene.remove(enemy.sprite);
+            state.enemies.splice(i, 1);
+            window.FarcadeSDK?.hapticFeedback();
           } else {
-            gameOver();
+            damagePlayer();
             break;
           }
         }
+        enemy.shootTimer -= dt;
+        if (enemy.shootTimer <= 0 && enemy.sprite.position.z < -6 && enemy.sprite.position.z > -120) {
+          fireEnemy(enemy, moveSpeed);
+          const refresh = state.time < 20 ? 1.4 : state.time < 50 ? 1.05 : 0.9;
+          enemy.shootTimer = refresh + Math.random() * 0.8;
+        }
       }
 
-      // score
-      state.score += Math.floor(dt * 12);
-      scoreEl.textContent = `SCORE ${state.score}`;
-
-      // energy UI frame
-      state.energyTimer += dt;
-      if (state.energyTimer > 0.1) {
-        state.energyTimer = 0;
-        state.energyFrame = (state.energyFrame + 1) % 4;
+      if (visibleCount > 0) {
+        state.lastEnemySeenTime = state.time;
+      } else if (state.time - state.lastEnemySeenTime > 0.6 || visibleCount < 2) {
+        // Force enemies back into view to avoid dead air.
+        let injected = 0;
+        for (let i = 0; i < activeEnemies && injected < 3; i++) {
+          const enemy = state.enemies[i];
+          enemy.sprite.position.set(laneX(), surfaceY + 0.2, -50 - injected * 16);
+          enemy.pattern = pickPattern();
+          enemy.shootTimer = 0.7 + Math.random() * 0.4;
+          injected += 1;
+        }
+        state.lastEnemySeenTime = state.time;
       }
-      const energyFrames = state.overcharge > 0 ? ASSETS.energy.over : ASSETS.energy.normal;
-      if (energyFrames.length) {
-        const frameIdx = state.energyFrame % energyFrames.length;
-        energyEl.src = energyFrames[frameIdx];
+
+      // bullet vs enemy collisions (charged bullets have larger blast)
+      for (let j = state.bullets.length - 1; j >= 0; j--) {
+        const bullet = state.bullets[j];
+        const blast = bullet.userData?.blastRadius || 1.0;
+        let hit = false;
+        for (let i = state.enemies.length - 1; i >= 0; i--) {
+          const enemy = state.enemies[i];
+          const dx = enemy.sprite.position.x - bullet.position.x;
+          const dz = enemy.sprite.position.z - bullet.position.z;
+          const dist = Math.hypot(dx, dz);
+          if (dist < blast) {
+            scene.remove(enemy.sprite);
+            state.enemies.splice(i, 1);
+            hit = true;
+          }
+        }
+        if (hit) {
+          const pierce = bullet.userData?.pierce || 0;
+          if (pierce > 0) {
+            bullet.userData.pierce -= 1;
+            bullet.scale.multiplyScalar(0.85);
+          } else {
+            scene.remove(bullet);
+            state.bullets.splice(j, 1);
+          }
+          window.FarcadeSDK?.hapticFeedback();
+        }
       }
-    }
 
-    function drawBackground() {
-      const g = ctx.createLinearGradient(0, 0, 0, canvas.height);
-      g.addColorStop(0, "#0f2036");
-      g.addColorStop(1, "#0a1424");
-      ctx.fillStyle = g;
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-      ctx.fillStyle = "#142a42";
-      ctx.fillRect(90, 0, 420, canvas.height);
-
-      ctx.strokeStyle = "rgba(255,255,255,0.25)";
-      ctx.lineWidth = 4;
-      ctx.setLineDash([22, 22]);
-      [220, 380].forEach((x) => {
-        ctx.beginPath();
-        ctx.moveTo(x, -40 + (state.time * 180) % 44);
-        ctx.lineTo(x, canvas.height);
-        ctx.stroke();
-      });
-      ctx.setLineDash([]);
-    }
-
-    function drawPlayer() {
-      let spriteUrl = ASSETS.scooter.rearIdle[Math.floor(state.time * 8) % ASSETS.scooter.rearIdle.length];
-      if (state.overcharge > 0) {
-        spriteUrl = ASSETS.scooter.rearFast[Math.floor(state.time * 10) % ASSETS.scooter.rearFast.length];
+      // enemy bullets
+      for (let i = state.enemyBullets.length - 1; i >= 0; i--) {
+        const bullet = state.enemyBullets[i];
+        bullet.position.x += bullet.userData.vx * dt;
+        bullet.position.z += bullet.userData.vz * dt;
+        bullet.position.y = surfaceY + 0.25;
+        if (bullet.position.z > 6 || bullet.position.z < -160) {
+          scene.remove(bullet);
+          state.enemyBullets.splice(i, 1);
+          continue;
+        }
+        if (Math.abs(bullet.position.z - playerZ) < 1.0 && Math.abs(bullet.position.x - state.playerX) < 1.0) {
+          scene.remove(bullet);
+          state.enemyBullets.splice(i, 1);
+          damagePlayer();
+        }
       }
-      if (state.laneShift < -5) spriteUrl = ASSETS.scooter.rearLeft;
-      if (state.laneShift > 5) spriteUrl = ASSETS.scooter.rearRight;
-      if (state.mode === "over") spriteUrl = ASSETS.scooter.rearStop;
 
-      const img = loadImage(spriteUrl);
-      const w = 160;
-      const h = 160;
-      const x = laneToX(state.laneIndex) + state.laneShift - w / 2;
-      const y = state.playerY - h / 2;
-      if (img && img.complete) {
-        ctx.drawImage(img, x, y, w, h);
-      } else {
-        ctx.fillStyle = "#62d9ff";
-        ctx.fillRect(x, y, w, h);
+      // powerups
+      for (let i = state.powerups.length - 1; i >= 0; i--) {
+        const orb = state.powerups[i];
+        orb.position.z += moveSpeed * dt;
+        orb.position.y = surfaceY + 0.5;
+        orb.rotation.y += (orb.userData.spin || 1) * dt;
+        if (orb.position.z > 8) {
+          scene.remove(orb);
+          state.powerups.splice(i, 1);
+          continue;
+        }
+        if (Math.abs(orb.position.z - playerZ) < 1.3 && Math.abs(orb.position.x - state.playerX) < 1.1) {
+          scene.remove(orb);
+          state.powerups.splice(i, 1);
+          if (orb.userData.type === "shield") {
+            state.shieldTime = 14;
+            state.shieldHits = 6;
+            shieldMesh.visible = true;
+          } else if (orb.userData.type === "ammo") {
+            state.ammo = state.maxAmmo;
+          } else if (orb.userData.type === "health") {
+            state.health = state.maxHealth;
+            updateHealthBar();
+          }
+          playSound("pickup");
+          window.FarcadeSDK?.hapticFeedback();
+        }
       }
-    }
 
-    function drawEnemies() {
-      state.entities.forEach((e) => {
-        const img = e.spriteUrl ? loadImage(e.spriteUrl) : null;
-        const size = 90;
-        if (img && img.complete) {
-          ctx.drawImage(img, e.x - size / 2, e.y - size / 2, size, size);
-        } else {
-          ctx.fillStyle = "#ff6b6b";
-          ctx.beginPath();
-          ctx.arc(e.x, e.y, 30, 0, Math.PI * 2);
-          ctx.fill();
+      // update props
+      state.props.forEach((prop) => {
+        prop.position.z += moveSpeed * dt;
+        if (prop.position.z > 8) {
+          prop.position.z = -140 - Math.random() * 100;
+          prop.position.x = (Math.random() < 0.5 ? -1 : 1) * (roadVisualWidth / 2 + 1.4 + Math.random() * 2.2);
         }
       });
+
+      // update distant buildings (slow parallax)
+      farBuildings.forEach((b) => {
+        b.position.z += moveSpeed * dt * 0.25;
+        if (b.position.z > 20) {
+          const side = Math.random() < 0.5 ? -1 : 1;
+          b.position.z = -220 - Math.random() * 240;
+          b.position.x = side * (roadWidth / 2 + 11 + Math.random() * 12);
+        }
+      });
+
+      mountainPlanes.forEach((m) => {
+        m.position.z += moveSpeed * dt * 0.08;
+        if (m.position.z > -80) {
+          m.position.z = -260 - Math.random() * 160;
+        }
+      });
+
+      hillSegments.forEach((h) => {
+        h.mesh.position.z += moveSpeed * dt * h.speed;
+        if (h.mesh.position.z > 20) {
+          const side = Math.random() < 0.5 ? -1 : 1;
+          h.mesh.position.z = -220 - Math.random() * 180;
+          h.mesh.position.x = side * (roadWidth / 2 + 12 + Math.random() * 10);
+        }
+      });
+
+      // player sprite animation
+      if (state.mode === "over") {
+        playerSprite.material.map = textures.stop;
+      } else if (state.playerX < -1) {
+        playerSprite.material.map = textures.left;
+      } else if (state.playerX > 1) {
+        playerSprite.material.map = textures.right;
+      } else if (state.overcharge > 0) {
+        const idx = Math.floor(state.time * 10) % textures.fast.length;
+        playerSprite.material.map = textures.fast[idx];
+      } else {
+        const idx = Math.floor(state.time * 8) % textures.idle.length;
+        playerSprite.material.map = textures.idle[idx];
+      }
+      playerSprite.material.needsUpdate = true;
+
+      scoreEl.textContent = `DIST ${Math.floor(state.distance)}m  TIME ${state.time.toFixed(1)}s  AMMO ${state.ammo}`;
+
+      state.energyTimer += dt;
+      if (state.energyTimer > 0.12) {
+        state.energyTimer = 0;
+        state.energyFrame = (state.energyFrame + 1) % 6;
+      }
+      const frames = state.overcharge > 0 ? ASSETS.energy.over : ASSETS.energy.normal;
+      if (frames.length) energyEl.src = frames[state.energyFrame % frames.length];
     }
 
     function render() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      drawBackground();
-      drawEnemies();
-      drawPlayer();
+      renderer.render(scene, camera);
     }
 
+    let lastTime = null;
     function loop(ts) {
-      if (!state.last) state.last = ts;
-      const dt = Math.min(0.033, (ts - state.last) / 1000);
-      state.last = ts;
+      if (!lastTime) lastTime = ts;
+      const dt = Math.min(0.033, (ts - lastTime) / 1000);
+      lastTime = ts;
       update(dt);
       render();
       requestAnimationFrame(loop);
     }
 
-    function handleMove(dir) {
-      if (state.mode !== "play") return;
-      const next = Math.max(0, Math.min(lanes.length - 1, state.laneTarget + dir));
-      if (next !== state.laneTarget) {
-        state.laneTarget = next;
-        if (window.FarcadeSDK) window.FarcadeSDK.hapticFeedback();
-      }
-    }
-
-    let touchStartX = 0;
-    canvas.addEventListener("pointerdown", (e) => {
-      touchStartX = e.clientX;
-      if (state.mode !== "play") {
-        resetGame();
-        return;
-      }
-    });
-    canvas.addEventListener("pointerup", (e) => {
-      if (state.mode !== "play") return;
-      const dx = e.clientX - touchStartX;
-      if (Math.abs(dx) > 40) {
-        handleMove(dx > 0 ? 1 : -1);
-      }
-    });
-
-    window.addEventListener("keydown", (e) => {
-      if (e.key === "ArrowLeft") handleMove(-1);
-      if (e.key === "ArrowRight") handleMove(1);
-      if (e.key === "f") {
-        if (!document.fullscreenElement) {
-          canvas.requestFullscreen().catch(() => {});
-        } else {
-          document.exitFullscreen().catch(() => {});
-        }
-      }
-    });
-
-    // Farcade SDK integration
-    window.FarcadeSDK?.onPlayAgain(() => {
-      resetGame();
-    });
-
-    window.FarcadeSDK?.onToggleMute((data) => {
-      // If audio is added later, toggle it here based on data.isMuted
-    });
-
-    // Deterministic stepping for automated tests
     window.advanceTime = (ms) => {
       const steps = Math.max(1, Math.round(ms / (1000 / 60)));
       for (let i = 0; i < steps; i++) update(1 / 60);
@@ -492,23 +2232,42 @@
     window.render_game_to_text = () => {
       const payload = {
         mode: state.mode,
-        score: state.score,
-        lane: state.laneIndex,
+        distance: state.distance,
+        time: state.time,
+        player: { x: state.playerX, z: playerZ },
+        enemies: state.enemies.map((e) => ({ x: e.sprite.position.x, z: e.sprite.position.z })),
+        bullets: state.bullets.map((b) => ({ x: b.position.x, z: b.position.z })),
+        enemyBullets: state.enemyBullets.map((b) => ({ x: b.position.x, z: b.position.z })),
+        powerups: state.powerups.map((p) => ({ x: p.position.x, z: p.position.z, type: p.userData?.type })),
         overcharge: state.overcharge > 0,
-        charge: state.charge,
-        player: {
-          x: laneToX(state.laneIndex) + state.laneShift,
-          y: state.playerY,
-          r: 38
-        },
-        enemies: state.entities.map((e) => ({ x: e.x, y: e.y, r: e.r })),
-        coords: "origin top-left, +x right, +y down"
+        overchargeTime: state.overcharge,
+        shootReady: state.shootCooldown <= 0,
+        ammo: state.ammo,
+        health: state.health,
+        shieldTime: state.shieldTime,
+        shieldHits: state.shieldHits,
+        coords: "x is left/right (road), z increases toward camera"
       };
       return JSON.stringify(payload);
     };
 
-    preload();
-    requestAnimationFrame(loop);
+    window.FarcadeSDK?.onPlayAgain(() => {
+      resetGame();
+    });
+
+    window.FarcadeSDK?.onToggleMute((data) => {
+      state.isMuted = !!data.isMuted;
+      applyMuted();
+    });
+
+    loadTextures()
+      .catch((err) => {
+        console.warn("Texture load issue", err);
+      })
+      .finally(() => {
+        if (ASSETS.energy.normal.length) energyEl.src = ASSETS.energy.normal[0];
+        initScene();
+      });
   </script>
 </body>
 </html>

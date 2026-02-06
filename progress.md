@@ -15,3 +15,99 @@ Original prompt: need your help to build a game for a game jam for the remix pla
 - Energy UI URLs integrated (single frame each for normal/overcharged).
 - TODO: If additional energy frames exist, add them for smooth animation.
 - Added extra energy UI frames (00010, 00015) to normal energy animation.
+- User approved shipping as-is.
+- Attempted npm install playwright (60s) for tests; timed out again, so Playwright tests not run.
+- Fixed start: overlay now listens for pointerdown to begin the game; canvas uses shared tryStart.
+- Set initial energy image on preload so UI isn't blank before first update.
+- TODO: Run Playwright tests once playwright is installed.
+- Reworked gameplay into a true racing time-trial with 2.5D perspective road, depth-scaled enemies, and steering via drag.
+- Added distance/time HUD, finish line logic, and updated render_game_to_text for new coords.
+- TODO: Run Playwright tests once playwright is installed; validate steering on mobile.
+- Rebuilt game using Phaser 3.80.1 CDN for a more standard 2.5D racing presentation.
+- Implemented time-trial race, drag steering, depth-scaled enemies, and HUD with energy frames.
+- Preserved Farcade SDK hooks and render_game_to_text/advanceTime.
+- TODO: Playtest for performance and ensure graphics layer isn't recreated too often.
+- Added roadside scenery elements (signs/pylons) with depth scaling for 2.5D vibe.
+- Reused a persistent Phaser Graphics layer instead of recreating per frame.
+- Fixed layout: added #frame wrapper to enforce 2:3 aspect ratio and keep HUD/overlay inside.
+- Replaced Graphics.setLineDash with custom dashed line helper to avoid Phaser runtime errors.
+- Fixed oversized sprites and piling: player sprite now uses fixed display size, enemies are destroyed when offscreen or hit, and entities cleared on reset.
+- Added scenery timer instead of random-per-frame spawning to avoid runaway clutter.
+- Rebuilt road rendering to a standard pseudo-3D segment-based renderer (projected road quads, rumble strips, lane markers).
+- Added deterministic roadside markers attached to segments and improved enemy projection.
+- Kept Phaser + Farcade SDK hooks, 2:3 frame layout intact.
+- Added projection guard for near-zero camera depth to avoid scale blowups.
+- Reimplemented pseudo-3D road with segment projection and lane/rumble/grass quads; scenery anchored to segments.
+- Road now fills the screen with perspective and should show roadside markers reliably.
+- Adjusted pseudo-3D cameraHeight/road width to bring road into view and added fallback road if projection yields no visible segments.
+- Adjusted segment visibility filtering to avoid dropping near segments; road should now render to the bottom of the screen.
+- Corrected projection cameraX usage to avoid over-shifting by curve; road center should now render properly.
+- Switched game to Three.js (option 1) with 3D road plane, ground, fog, and billboard sprites for player/enemies.
+- Added procedural road/ground textures, roadside props, and 3D camera for standard racing feel.
+- Preserved Farcade SDK hooks, 2:3 frame layout, advanceTime, and render_game_to_text.
+- Attempted Playwright run after Three.js changes; failed because 'playwright' package is not installed (ERR_MODULE_NOT_FOUND).
+- Added 3D environment: sky dome, star field, distant mountains, and skyline blocks with parallax.
+- Camera now subtly tracks player for added depth; props/buildings/mountains scroll at varied speeds.
+- Switched environment to daytime: bright sky gradient, lighter fog, brighter lights, and sun mesh.
+- Added vegetation by turning roadside props into tree signs mix; ground texture now green.
+- Adjusted mountain/skyline colors for daylight palette.
+- Added shooting mechanic (tap/space), bullets, cooldown, and bullet-enemy collisions.
+- Made game infinite by removing finish condition.
+- Daytime environment tweaks: moved mountains/skyline further and higher to avoid overlap; added more vegetation density.
+- Added charged (mega) shots during overcharge: larger, faster bullets with pierce; overcharge drains per shot.
+- Added bullet cooldown and updated HUD text to explain mega shots.
+- Moved mountains/skyline further back and higher to reduce overlap; added more trees/bushes for vegetation.
+- Made run infinite (no finish). Added shootReady/overchargeTime to render_game_to_text.
+- Playwright run still blocked: playwright package missing (ERR_MODULE_NOT_FOUND).
+- Added player health with lives UI and damage cooldown; enemies now fire projectiles.
+- Added charged mega-shot blast radius, bigger bullets, and faster speed during overcharge.
+- Moved mountains/skyline further back and higher to prevent road overlap; increased vegetation density.
+- Updated start menu styling and messaging.
+
+2026-02-04
+- Fixed damage handling to use health bar + shield absorption; removed undefined updateLives call.
+- Added shield powerup collection, shield visuals, and shield timer decrement in update loop.
+- Enemy shooting now uses pattern-based fireEnemy (aim/burst/scatter) and no longer calls missing spawnEnemyBullet.
+- Boosted charged shot size and blast radius; added shield status + powerups to render_game_to_text.
+- Increased vegetation density, lightened ground, and moved mountains higher/further back to reduce road overlap.
+- Refined menu copy/hint to mention shields and refreshed overlay styling for a brighter daytime vibe.
+- Playwright run failed again: playwright package missing (ERR_MODULE_NOT_FOUND).
+- Installed Playwright locally via npm install -D playwright; automated tests can run now.
+- Installed Playwright in skill folder and downloaded Chromium + headless shell; created symlinks to satisfy mac-x64 paths.
+- Playwright runs still failing: headless shell crash (MachPortRendezvous permission denied) and headed Chromium crashpad error (chrome_crashpad_handler: --database is required).
+- Added robust texture loading with fallbacks/timeouts so the game starts even if remote assets fail.
+- Guarded GLTFLoader usage; fallback to procedural road if loader unavailable.
+- loadTextures now always resolves; initScene runs via finally.
+- Replaced GLTFLoader dependency with a minimal inline glTF parser so Kenney tiles load without external loader scripts.
+- Removed GLTFLoader CDN script and fallback warning; Kenney tiles now parsed from embedded glTF strings.
+- Swapped Kenney road tile to roadTile_034 (flat asphalt) and hid procedural road when Kenney tiles load to fix the split-road view.
+- Fixed Kenney ground alignment by tiling grass strips along both sides of the road and hiding the procedural ground plane.
+- Stored Kenney road scale and grass segment length to keep tiles aligned; removed random grass repositioning.
+- Widened Kenney road visual width (roadVisualWidth) and overlapped grass strips to remove the seam.
+- Updated prop placement to use roadVisualWidth for consistent roadside positioning.
+- Raised player/enemy/bullet/powerup heights based on Kenney tile surfaceY to prevent sprites going under the road.
+- Set sprite materials to depthTest=false/depthWrite=false so characters always render above the road mesh.
+- Adjusted Kenney tile centering: removed in-place centering, now compute offsets and apply when placing road/grass/hills to eliminate right-shifted road seam.
+- Extended Kenney road and grass forward with roadLead so tiles cover behind the player/camera; updated wrap threshold to roadLead to prevent the road closing behind the character.
+- Increased player/enemy sprite sizes and collision bounds for better visibility.
+- Enemy shooting now scales with moveSpeed and uses staged patterns (aim -> burst -> scatter) based on elapsed time.
+- Spawn rate and max enemies ramp up over time for a smoother difficulty curve.
+- Added audio placeholder URLs and lightweight audio system (initAudio/applyMuted/playSound).
+- Hooked sounds into shoot/hit/overcharge/pickup/crash and engine loop on start; mute toggled via Farcade onToggleMute.
+- Added bgm loop placeholder and playback alongside engine (start/pause on game start/end).
+- Increased enemy sprite scale and raised enemy y-position to match player height; spawn z moved closer for visibility.
+- Switched to pre-spawned enemy pool (10) with reset/recycle; active count ramps over time instead of random spawning.
+- Enemy shooting now leads player slightly and uses higher shot speed to avoid floating; early cadence slowed for ~2 min survival target.
+- Increased maxHealth to 120 and reduced hit damage to 20.
+- Increased early active enemies to 5 with ramp (time/18) for immediate action; shooting cadence softened early for 1–2 min survivability.
+- Shield now lasts ~12s and absorbs 3 hits (shieldHits), expiring on time or hits.
+- Seeded first 5 enemies close to the player at reset (z -20 to -92) to remove early dead time; recycle spawn now starts further back (-120..-240).
+- Added lastEnemySeenTime and enforcement: if no enemy in view for >2s, force one back into range.
+- Switched enemy flow to a conveyor: enemySpawnZ seeds continuous spacing (18 units) so enemies are always visible; resetEnemy now uses spawn queue instead of random gaps.
+- Increased starting active enemies to 6 with slower ramp; early shot cadence slightly faster to keep action without spiking difficulty.
+- Added ammo system (maxAmmo 18), ammo cost per shot, and HUD ammo display in score.
+- Added ammo/health powerups; shield now one of three powerup types.
+- Enemy spawn queue now wraps between -60 and -240 to prevent long gaps; forced injection after 1s if none visible.
+- Increased enemy bullet speed to avoid floating.
+- Shield now blocks all damage while active; lasts 14s and tracks hits separately.
+- Enemy visibility enforcement tightened: if <2 visible or >0.6s gap, inject 3 enemies closer.
