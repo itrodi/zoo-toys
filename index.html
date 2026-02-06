@@ -30,6 +30,7 @@
     }
     #frame {
       width: min(90vw, 60vh);
+      max-height: 95vh;
       aspect-ratio: 2 / 3;
       position: relative;
       border-radius: 18px;
@@ -61,9 +62,11 @@
       display: grid;
       grid-template-columns: 1fr auto 1fr;
       align-items: center;
-      font-size: 14px;
-      letter-spacing: 0.5px;
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.6px;
       gap: 8px;
+      text-shadow: 0 1px 4px rgba(0,0,0,0.5), 0 0 8px rgba(0,0,0,0.2);
     }
     #score { justify-self: start; }
     #energy { justify-self: end; }
@@ -97,38 +100,63 @@
       justify-content: center;
       text-align: center;
       padding: 16px;
-      background: radial-gradient(circle at 50% 30%, rgba(255,255,255,0.18), rgba(16,28,48,0.82));
+      background: radial-gradient(ellipse at 50% 25%, rgba(102,242,255,0.08) 0%, rgba(10,18,32,0.88) 70%);
     }
     #overlay.hidden { display: none; }
     .card {
       max-width: 340px;
-      background: linear-gradient(160deg, rgba(24,44,70,0.92), rgba(10,22,40,0.86));
-      border: 1px solid rgba(255,255,255,0.12);
-      border-radius: 18px;
-      padding: 20px;
-      box-shadow: 0 18px 40px rgba(0,0,0,0.45);
-      backdrop-filter: blur(10px);
+      background: linear-gradient(165deg, rgba(20,38,65,0.95), rgba(8,18,36,0.92));
+      border: 1px solid rgba(102,242,255,0.15);
+      border-radius: 22px;
+      padding: 28px 24px;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.5), 0 0 30px rgba(102,242,255,0.05);
+      backdrop-filter: blur(12px);
     }
     .card::before {
       content: "";
       display: block;
-      width: 48px;
-      height: 4px;
-      margin: 0 auto 12px auto;
+      width: 60px;
+      height: 3px;
+      margin: 0 auto 16px auto;
       border-radius: 999px;
-      background: linear-gradient(90deg, rgba(102,242,255,0.1), rgba(102,242,255,0.9), rgba(102,242,255,0.1));
-      box-shadow: 0 0 12px rgba(102,242,255,0.6);
+      background: linear-gradient(90deg, transparent, #66f2ff, transparent);
+      box-shadow: 0 0 16px rgba(102,242,255,0.5);
     }
-    .title { font-size: 22px; margin-bottom: 6px; letter-spacing: 0.6px; }
-    .subtitle { font-size: 14px; opacity: 0.85; margin-bottom: 14px; }
+    .title {
+      font-size: 24px;
+      font-weight: 700;
+      margin-bottom: 8px;
+      letter-spacing: 1.2px;
+      text-transform: uppercase;
+      background: linear-gradient(135deg, #ffffff, #66f2ff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .subtitle {
+      font-size: 13px;
+      opacity: 0.75;
+      margin-bottom: 20px;
+      line-height: 1.5;
+      letter-spacing: 0.3px;
+    }
     .btn {
       display: inline-block;
-      padding: 10px 16px;
+      padding: 12px 28px;
       border-radius: 999px;
-      background: linear-gradient(135deg, #66f2ff, #2be7c1);
+      background: linear-gradient(135deg, #66f2ff, #2be7c1, #36d6a8);
+      background-size: 200% 200%;
       color: #0b1320;
       font-weight: 700;
-      box-shadow: 0 10px 20px rgba(43,231,193,0.35);
+      font-size: 15px;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      box-shadow: 0 8px 24px rgba(43,231,193,0.35), inset 0 1px 0 rgba(255,255,255,0.25);
+      animation: btnShimmer 3s ease-in-out infinite;
+    }
+    @keyframes btnShimmer {
+      0%, 100% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
     }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
@@ -1076,8 +1104,8 @@
       energyFrame: 0,
       energyTimer: 0,
       shootCooldown: 0,
-      ammo: 18,
-      maxAmmo: 18,
+      ammo: 50,
+      maxAmmo: 50,
       health: 100,
       maxHealth: 120,
       damageCooldown: 0,
@@ -1161,11 +1189,26 @@
       canvas.width = 256;
       canvas.height = 256;
       const ctx = canvas.getContext("2d");
-      ctx.fillStyle = "#3f7f4f";
+      // richer grass base with subtle gradient
+      const grad = ctx.createLinearGradient(0, 0, 256, 256);
+      grad.addColorStop(0, "#3a8c4a");
+      grad.addColorStop(0.5, "#2e7a3e");
+      grad.addColorStop(1, "#3a8c4a");
+      ctx.fillStyle = grad;
       ctx.fillRect(0, 0, 256, 256);
-      ctx.fillStyle = "rgba(90,150,100,0.65)";
-      for (let i = 0; i < 1000; i++) {
-        ctx.fillRect(Math.random() * 256, Math.random() * 256, 2, 2);
+      // grass blade specks
+      const greens = ["rgba(80,160,90,0.6)", "rgba(60,130,70,0.5)", "rgba(100,180,110,0.4)"];
+      for (let i = 0; i < 1500; i++) {
+        ctx.fillStyle = greens[Math.floor(Math.random() * greens.length)];
+        ctx.fillRect(Math.random() * 256, Math.random() * 256, 1 + Math.random() * 2, 1 + Math.random() * 2);
+      }
+      // tiny wildflower dots
+      const flowers = ["rgba(255,220,80,0.7)", "rgba(255,160,200,0.6)", "rgba(200,180,255,0.5)"];
+      for (let i = 0; i < 80; i++) {
+        ctx.fillStyle = flowers[Math.floor(Math.random() * flowers.length)];
+        ctx.beginPath();
+        ctx.arc(Math.random() * 256, Math.random() * 256, 1.5, 0, Math.PI * 2);
+        ctx.fill();
       }
       const tex = new THREE.CanvasTexture(canvas);
       tex.wrapS = THREE.RepeatWrapping;
@@ -1181,11 +1224,26 @@
       canvas.height = 512;
       const ctx = canvas.getContext("2d");
       const grad = ctx.createLinearGradient(0, 0, 0, 512);
-      grad.addColorStop(0, "#8fd3ff");
-      grad.addColorStop(0.4, "#bfe6ff");
-      grad.addColorStop(1, "#eaf7ff");
+      grad.addColorStop(0, "#4a90d9");
+      grad.addColorStop(0.25, "#7dc0f5");
+      grad.addColorStop(0.55, "#b8e0ff");
+      grad.addColorStop(0.8, "#e8f4ff");
+      grad.addColorStop(1, "#ffecd2");
       ctx.fillStyle = grad;
       ctx.fillRect(0, 0, 512, 512);
+      // soft cloud wisps
+      ctx.globalAlpha = 0.15;
+      for (let i = 0; i < 12; i++) {
+        const cx = Math.random() * 512;
+        const cy = 60 + Math.random() * 200;
+        const rx = 40 + Math.random() * 80;
+        const ry = 8 + Math.random() * 16;
+        ctx.fillStyle = "#ffffff";
+        ctx.beginPath();
+        ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1.0;
       return new THREE.CanvasTexture(canvas);
     }
 
@@ -1194,21 +1252,35 @@
       canvas.width = 512;
       canvas.height = 256;
       const ctx = canvas.getContext("2d");
-      ctx.fillStyle = "rgba(0,0,0,0)";
-      ctx.fillRect(0, 0, 512, 256);
-      ctx.fillStyle = "rgba(120,150,180,0.6)";
+      ctx.clearRect(0, 0, 512, 256);
+      // far range (lighter, bluer)
+      ctx.fillStyle = "rgba(140,170,200,0.45)";
       ctx.beginPath();
-      ctx.moveTo(0, 200);
-      ctx.lineTo(80, 130);
-      ctx.lineTo(170, 180);
-      ctx.lineTo(260, 120);
-      ctx.lineTo(360, 190);
-      ctx.lineTo(450, 140);
-      ctx.lineTo(512, 200);
-      ctx.lineTo(512, 256);
-      ctx.lineTo(0, 256);
+      ctx.moveTo(0, 180);
+      ctx.lineTo(60, 110); ctx.lineTo(140, 160); ctx.lineTo(220, 90);
+      ctx.lineTo(310, 150); ctx.lineTo(400, 100); ctx.lineTo(480, 155); ctx.lineTo(512, 130);
+      ctx.lineTo(512, 256); ctx.lineTo(0, 256);
       ctx.closePath();
       ctx.fill();
+      // near range (darker, more defined)
+      ctx.fillStyle = "rgba(90,120,155,0.6)";
+      ctx.beginPath();
+      ctx.moveTo(0, 200);
+      ctx.lineTo(80, 140); ctx.lineTo(170, 185); ctx.lineTo(260, 125);
+      ctx.lineTo(360, 195); ctx.lineTo(450, 145); ctx.lineTo(512, 200);
+      ctx.lineTo(512, 256); ctx.lineTo(0, 256);
+      ctx.closePath();
+      ctx.fill();
+      // snow caps on the taller peaks
+      ctx.fillStyle = "rgba(240,248,255,0.5)";
+      [[220, 90, 18], [400, 100, 14], [60, 110, 10]].forEach(([px, py, r]) => {
+        ctx.beginPath();
+        ctx.moveTo(px - r, py + 6);
+        ctx.lineTo(px, py);
+        ctx.lineTo(px + r, py + 6);
+        ctx.closePath();
+        ctx.fill();
+      });
       return new THREE.CanvasTexture(canvas);
     }
 
@@ -1473,8 +1545,8 @@
 
     function initScene() {
       scene = new THREE.Scene();
-      scene.background = new THREE.Color(0x8fd3ff);
-      scene.fog = new THREE.Fog(0xbfe6ff, 12, 180);
+      scene.background = new THREE.Color(0x7dc0f5);
+      scene.fog = new THREE.Fog(0xc8e6ff, 15, 200);
 
       camera = new THREE.PerspectiveCamera(60, 2 / 3, 0.1, 300);
       camera.position.set(0, 5.5, 12);
@@ -1485,11 +1557,14 @@
       renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
       gameEl.appendChild(renderer.domElement);
 
-      const ambient = new THREE.AmbientLight(0xffffff, 1.0);
+      const ambient = new THREE.AmbientLight(0xfff8f0, 0.85);
       scene.add(ambient);
-      const dir = new THREE.DirectionalLight(0xffffff, 0.9);
-      dir.position.set(8, 12, 6);
+      const dir = new THREE.DirectionalLight(0xfff4e0, 1.0);
+      dir.position.set(8, 14, 6);
       scene.add(dir);
+      const fill = new THREE.DirectionalLight(0xb0d4f1, 0.3);
+      fill.position.set(-6, 6, -4);
+      scene.add(fill);
 
       // sky dome + stars
       const skyTex = createSkyTexture();
@@ -1501,10 +1576,17 @@
 
       // sun
       sunMesh = new THREE.Mesh(
-        new THREE.SphereGeometry(6, 24, 16),
-        new THREE.MeshBasicMaterial({ color: 0xfff2b3 })
+        new THREE.SphereGeometry(7, 24, 16),
+        new THREE.MeshBasicMaterial({ color: 0xfff8d6 })
       );
-      sunMesh.position.set(30, 25, -120);
+      sunMesh.position.set(30, 28, -130);
+      // sun glow halo
+      const sunGlow = new THREE.Mesh(
+        new THREE.SphereGeometry(12, 24, 16),
+        new THREE.MeshBasicMaterial({ color: 0xfff0b8, transparent: true, opacity: 0.15 })
+      );
+      sunGlow.position.copy(sunMesh.position);
+      scene.add(sunGlow);
       scene.add(sunMesh);
 
       const groundTex = createGroundTexture();
@@ -1662,33 +1744,93 @@
 
     function makeTree() {
       const group = new THREE.Group();
+      const treeType = Math.random();
+      const trunkH = 0.8 + Math.random() * 0.6;
       const trunk = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.12, 0.18, 1.1, 8),
-        new THREE.MeshStandardMaterial({ color: 0x7b5a3c })
+        new THREE.CylinderGeometry(0.1, 0.16, trunkH, 8),
+        new THREE.MeshStandardMaterial({ color: treeType < 0.5 ? 0x7b5a3c : 0x6b4e35 })
       );
-      trunk.position.y = 0.55;
-      const crown = new THREE.Mesh(
-        new THREE.ConeGeometry(0.8, 1.8, 10),
-        new THREE.MeshStandardMaterial({ color: 0x3e9b52 })
-      );
-      crown.position.y = 1.7;
-      group.add(trunk, crown);
+      trunk.position.y = trunkH / 2;
+      group.add(trunk);
+      if (treeType < 0.4) {
+        // pine tree (cone)
+        const crownColors = [0x2e8b40, 0x3e9b52, 0x358a48];
+        const crown = new THREE.Mesh(
+          new THREE.ConeGeometry(0.7 + Math.random() * 0.3, 1.6 + Math.random() * 0.5, 10),
+          new THREE.MeshStandardMaterial({ color: crownColors[Math.floor(Math.random() * crownColors.length)] })
+        );
+        crown.position.y = trunkH + 0.6;
+        group.add(crown);
+      } else if (treeType < 0.7) {
+        // round leafy tree (sphere)
+        const crown = new THREE.Mesh(
+          new THREE.SphereGeometry(0.7 + Math.random() * 0.3, 10, 8),
+          new THREE.MeshStandardMaterial({ color: 0x4caf50 })
+        );
+        crown.position.y = trunkH + 0.5;
+        group.add(crown);
+      } else {
+        // layered pine (two cones)
+        const c1 = new THREE.Mesh(
+          new THREE.ConeGeometry(0.8, 1.2, 10),
+          new THREE.MeshStandardMaterial({ color: 0x2d7a3a })
+        );
+        c1.position.y = trunkH + 0.3;
+        const c2 = new THREE.Mesh(
+          new THREE.ConeGeometry(0.55, 0.9, 10),
+          new THREE.MeshStandardMaterial({ color: 0x3a9c4e })
+        );
+        c2.position.y = trunkH + 1.0;
+        group.add(c1, c2);
+      }
       return group;
     }
 
     function makeBush() {
-      const bush = new THREE.Mesh(
-        new THREE.SphereGeometry(0.55, 10, 8),
-        new THREE.MeshStandardMaterial({ color: 0x4fae62 })
+      const group = new THREE.Group();
+      const bushColors = [0x4fae62, 0x5cb85c, 0x3d9b4f];
+      const color = bushColors[Math.floor(Math.random() * bushColors.length)];
+      const main = new THREE.Mesh(
+        new THREE.SphereGeometry(0.45 + Math.random() * 0.2, 10, 8),
+        new THREE.MeshStandardMaterial({ color })
       );
-      bush.position.y = 0.4;
-      return bush;
+      main.position.y = 0.35;
+      group.add(main);
+      // add a side lobe for fullness
+      const side = new THREE.Mesh(
+        new THREE.SphereGeometry(0.3 + Math.random() * 0.15, 8, 6),
+        new THREE.MeshStandardMaterial({ color })
+      );
+      side.position.set(0.25, 0.25, 0.1);
+      group.add(side);
+      // occasional flower dot on bush
+      if (Math.random() < 0.35) {
+        const flowerColors = [0xff6b9d, 0xffd93d, 0xc084fc];
+        const flower = new THREE.Mesh(
+          new THREE.SphereGeometry(0.08, 6, 6),
+          new THREE.MeshStandardMaterial({ color: flowerColors[Math.floor(Math.random() * flowerColors.length)], emissive: 0x222222, emissiveIntensity: 0.3 })
+        );
+        flower.position.set(Math.random() * 0.3 - 0.15, 0.5, Math.random() * 0.2);
+        group.add(flower);
+      }
+      return group;
+    }
+
+    function makeRock() {
+      const rock = new THREE.Mesh(
+        new THREE.DodecahedronGeometry(0.25 + Math.random() * 0.2, 0),
+        new THREE.MeshStandardMaterial({ color: 0x8a9bae, roughness: 0.9 })
+      );
+      rock.position.y = 0.2;
+      rock.rotation.set(Math.random(), Math.random(), 0);
+      return rock;
     }
 
     function makeProp() {
       const roll = Math.random();
-      if (roll < 0.65) return makeTree();
-      if (roll < 0.85) return makeBush();
+      if (roll < 0.5) return makeTree();
+      if (roll < 0.72) return makeBush();
+      if (roll < 0.82) return makeRock();
       const group = new THREE.Group();
       const pole = new THREE.Mesh(
         new THREE.CylinderGeometry(0.05, 0.05, 1.2, 8),
@@ -1901,13 +2043,10 @@
         audio.engine.play().catch(() => {});
       }
       overlay.classList.add("hidden");
-      overlay.querySelector(".title").textContent = "Overcharge Dash 3D";
-      overlay.querySelector(".subtitle").textContent = "Race forever. Overcharge unlocks mega shots. Grab shields.";
-      overlay.querySelector(".btn").textContent = "Tap to Start";
       updateHealthBar();
     }
 
-    function gameOver(title, subtitle) {
+    function gameOver() {
       if (state.mode !== "play") return;
       state.mode = "over";
       if (audio) {
@@ -1915,10 +2054,6 @@
         audio.bgm.pause();
       }
       playSound("crash");
-      overlay.classList.remove("hidden");
-      overlay.querySelector(".title").textContent = title;
-      overlay.querySelector(".subtitle").textContent = subtitle;
-      overlay.querySelector(".btn").textContent = "Race Again";
       window.FarcadeSDK?.singlePlayer?.actions.gameOver({ score: Math.floor(state.distance) });
     }
 
@@ -1936,7 +2071,7 @@
       playSound("hit");
       window.FarcadeSDK?.hapticFeedback();
       if (state.health <= 0) {
-        gameOver("Wiped Out!", `Distance ${Math.floor(state.distance)}m`);
+        gameOver();
       }
     }
 
