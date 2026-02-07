@@ -1854,7 +1854,7 @@
     function createEnemy() {
       const tex = textures.enemies[Math.floor(Math.random() * textures.enemies.length)];
       const enemy = makeSprite(tex);
-      enemy.scale.set(2.6, 2.6, 1);
+      enemy.scale.set(3.2, 3.2, 1);
       scene.add(enemy);
       return { sprite: enemy, shootTimer: 0, pattern: "aim" };
     }
@@ -1871,8 +1871,8 @@
       enemy.sprite.position.set(laneX(), surfaceY + 0.2, state.enemySpawnZ + (Math.random() * 6 - 3));
       state.enemySpawnZ -= 15;
       enemy.pattern = pickPattern();
-      const baseDelay = state.time < 20 ? 1.3 : state.time < 50 ? 1.1 : 0.9;
-      enemy.shootTimer = baseDelay + Math.random() * 0.6;
+      const baseDelay = state.time < 30 ? 2.0 : state.time < 60 ? 1.4 : state.time < 90 ? 1.1 : 0.9;
+      enemy.shootTimer = baseDelay + Math.random() * 0.8;
     }
 
     function spawnBullet(charged) {
@@ -2065,7 +2065,8 @@
         window.FarcadeSDK?.hapticFeedback();
         return;
       }
-      state.health = Math.max(0, state.health - 20);
+      const dmg = state.time < 30 ? 8 : state.time < 60 ? 12 : 20;
+      state.health = Math.max(0, state.health - dmg);
       state.damageCooldown = 1.0;
       updateHealthBar();
       playSound("hit");
@@ -2197,7 +2198,7 @@
         enemy.shootTimer -= dt;
         if (enemy.shootTimer <= 0 && enemy.sprite.position.z < -6 && enemy.sprite.position.z > -120) {
           fireEnemy(enemy, moveSpeed);
-          const refresh = state.time < 20 ? 1.4 : state.time < 50 ? 1.05 : 0.9;
+          const refresh = state.time < 30 ? 2.0 : state.time < 60 ? 1.4 : state.time < 90 ? 1.1 : 0.9;
           enemy.shootTimer = refresh + Math.random() * 0.8;
         }
       }
