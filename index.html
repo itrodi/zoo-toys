@@ -87,6 +87,54 @@
       box-shadow: 0 0 10px rgba(255,95,95,0.45);
       transition: width 0.12s linear;
     }
+    #health.critical #healthFill {
+      animation: healthPulse 0.5s ease-in-out infinite;
+    }
+    @keyframes healthPulse {
+      0%, 100% { box-shadow: 0 0 10px rgba(255,95,95,0.45); }
+      50% { box-shadow: 0 0 18px rgba(255,40,40,0.9), 0 0 4px rgba(255,0,0,0.6) inset; }
+    }
+    #chargeBar {
+      justify-self: center;
+      width: 120px;
+      height: 6px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.15);
+      overflow: hidden;
+      border: 1px solid rgba(102,242,255,0.25);
+      margin-top: 3px;
+    }
+    #chargeFill {
+      height: 100%;
+      width: 0%;
+      border-radius: 999px;
+      background: linear-gradient(90deg, #3ad8e6, #66f2ff);
+      box-shadow: 0 0 6px rgba(102,242,255,0.4);
+      transition: width 0.1s linear;
+    }
+    #chargeFill.overcharged {
+      background: linear-gradient(90deg, #66f2ff, #b8f0ff, #66f2ff);
+      background-size: 200% 100%;
+      box-shadow: 0 0 12px rgba(102,242,255,0.8);
+      animation: chargePulse 0.4s linear infinite;
+    }
+    @keyframes chargePulse {
+      0% { background-position: 0% 0%; }
+      100% { background-position: 200% 0%; }
+    }
+    #shieldInfo {
+      position: absolute;
+      top: 42px;
+      left: 12px;
+      font-size: 11px;
+      font-weight: 600;
+      color: #66f2ff;
+      text-shadow: 0 1px 4px rgba(0,0,0,0.5);
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+    #shieldInfo.active { opacity: 1; }
     #energy {
       width: 120px;
       height: 32px;
@@ -203,11 +251,15 @@
       <div id="game"></div>
       <div id="hud">
         <div id="topbar">
-          <div id="score">DIST 0m  TIME 0.0s</div>
-          <div id="health"><div id="healthFill"></div></div>
+          <div id="score">0</div>
+          <div style="justify-self:center; display:flex; flex-direction:column; align-items:center;">
+            <div id="health"><div id="healthFill"></div></div>
+            <div id="chargeBar"><div id="chargeFill"></div></div>
+          </div>
           <img id="energy" alt="energy" />
         </div>
-        <div id="hint" style="font-size:12px;opacity:0.8;">Drag to steer, tap to shoot. Grab shields to absorb hits.</div>
+        <div id="shieldInfo"></div>
+        <div id="hint" style="font-size:11px;opacity:0.75;line-height:1.4;max-width:90%;text-align:center;">Drag to steer, tap to shoot. Build combos for score multipliers. Overcharge charges automatically for mega shots!</div>
       </div>
       <div id="damageFlash"></div>
       <div id="lowHealthVignette"></div>
@@ -1134,6 +1186,10 @@
     const milestoneEl = document.getElementById("milestoneText");
     const comboEl = document.getElementById("comboDisplay");
     const nearMissEl = document.getElementById("nearMissText");
+    const chargeFillEl = document.getElementById("chargeFill");
+    const chargeBarEl = document.getElementById("chargeBar");
+    const shieldInfoEl = document.getElementById("shieldInfo");
+    const healthEl = document.getElementById("health");
 
     const state = {
       mode: "start",
@@ -2113,6 +2169,10 @@
       const points = 50 * state.comboMultiplier;
       state.killScore += points;
       spawnFloatingText("+" + points, x, surfaceY + 1.5, z, state.comboMultiplier > 1 ? "#ff6b6b" : "#ffd93d");
+      // ammo refund on kill
+      if (state.ammo < state.maxAmmo) {
+        state.ammo = Math.min(state.maxAmmo, state.ammo + 2);
+      }
       // enemy death effects
       spawnParticles(x, surfaceY + 0.5, z, 0xff8844, 8, 3);
       spawnExplosionRing(x, surfaceY + 0.3, z, 0xff6633);
@@ -2347,7 +2407,7 @@
       // infinite run - no finish line
 
       const activeEnemies = Math.min(state.enemies.length, 8 + Math.floor(state.time / 30));
-      if (state.powerups.length < 1 && Math.random() < 0.004) spawnPowerup();
+      if (state.powerups.length < 2 && Math.random() < 0.006) spawnPowerup();
 
       state.shootCooldown = Math.max(0, state.shootCooldown - dt);
       state.damageCooldown = Math.max(0, state.damageCooldown - dt);
@@ -2361,9 +2421,10 @@
         if (state.comboTimer <= 0) { state.combo = 0; state.comboMultiplier = 1; }
       }
 
-      // ammo regen: +1 every 2.5s
+      // ammo regen: scales faster as game progresses
+      const regenRate = state.time < 60 ? 2.5 : state.time < 120 ? 2.0 : 1.5;
       state.ammoRegenTimer += dt;
-      if (state.ammoRegenTimer >= 2.5 && state.ammo < state.maxAmmo) {
+      if (state.ammoRegenTimer >= regenRate && state.ammo < state.maxAmmo) {
         state.ammo = Math.min(state.maxAmmo, state.ammo + 1);
         state.ammoRegenTimer = 0;
       }
@@ -2832,6 +2893,30 @@
 
       const totalScore = Math.floor(state.distance * state.comboMultiplier + state.killScore);
       scoreEl.textContent = `${totalScore}  AMMO ${state.ammo}${state.magnetTime > 0 ? '  MAGNET' : ''}`;
+
+      // charge/overcharge bar
+      if (state.overcharge > 0) {
+        chargeFillEl.style.width = (state.overcharge / 3.5 * 100) + "%";
+        if (!chargeFillEl.classList.contains("overcharged")) chargeFillEl.classList.add("overcharged");
+      } else {
+        chargeFillEl.style.width = (state.charge * 100) + "%";
+        if (chargeFillEl.classList.contains("overcharged")) chargeFillEl.classList.remove("overcharged");
+      }
+
+      // health bar pulse at critical HP
+      if (state.health < state.maxHealth * 0.25 && state.health > 0) {
+        if (!healthEl.classList.contains("critical")) healthEl.classList.add("critical");
+      } else {
+        if (healthEl.classList.contains("critical")) healthEl.classList.remove("critical");
+      }
+
+      // shield info
+      if (state.shieldTime > 0) {
+        shieldInfoEl.textContent = "SHIELD " + Math.ceil(state.shieldTime) + "s (" + state.shieldHits + " hits)";
+        if (!shieldInfoEl.classList.contains("active")) shieldInfoEl.classList.add("active");
+      } else {
+        if (shieldInfoEl.classList.contains("active")) shieldInfoEl.classList.remove("active");
+      }
 
       state.energyTimer += dt;
       if (state.energyTimer > 0.12) {
